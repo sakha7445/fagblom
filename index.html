@@ -231,11 +231,13 @@ h2 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 600; letter-spacing: -0.
 .link { display: inline-flex; align-items: center; gap: 4px; color: var(--rose-deep); font-size: 13.5px; font-weight: 500; text-decoration: none; }
 .link:hover { text-decoration: underline; }
 .today-list { display: grid; gap: 8px; }
-.home-pet-row { display: flex; align-items: center; gap: 14px; }
-.home-pet-art { width: 96px; height: 96px; flex: none; overflow: hidden; border-radius: 50%; background: var(--rose-soft); border: 1px solid var(--border); }
+.home-pet-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.home-pet-art { width: 88px; height: 88px; flex: none; overflow: hidden; border-radius: 50%; background: var(--rose-soft); border: 1px solid var(--border); }
 .home-pet-art svg { display: block; width: 100%; height: 100%; }
-.home-pet-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; flex: 1; }
+.home-pet-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; flex: 1 1 150px; }
+.home-pet-info .muted { overflow-wrap: anywhere; }
 .home-pet-info .progress { width: 100%; flex: none; margin: 4px 0; }
+.home-pet-info .badge { max-width: 100%; white-space: normal; text-align: center; }
 .guide { margin-bottom: 16px; }
 .guide h2 { margin-bottom: 8px; }
 .guide-steps { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; }
@@ -557,7 +559,7 @@ button.badge { cursor: pointer; }
 .pet-level { margin: 0 0 6px; color: var(--rose-deep); font-weight: 600; }
 .pet-info .progress { margin: 6px 0 10px; }
 .pet-balance { margin: 0 0 6px; }
-.badge.points { background: var(--rose-soft); color: var(--rose-deep); border-color: var(--rose); font-size: 13.5px; padding: 2px 12px; }
+.badge.points { max-width: 100%; white-space: normal; background: var(--rose-soft); color: var(--rose-deep); border-color: var(--rose); font-size: 13.5px; padding: 2px 12px; }
 .pet-text { margin: 6px 0 0; font-size: 13.5px; }
 
 .pet-edit { margin-top: 12px; }
@@ -628,6 +630,11 @@ button.badge { cursor: pointer; }
 .toast:empty { display: none; }
 
 footer { margin-top: 56px; color: var(--muted); font-size: 13px; }
+
+/* Når det ikke er plass til to kolonner ved siden av sidemenyen */
+@media (max-width: 1180px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* ---------- Mobil og nettbrett ---------- */
 
