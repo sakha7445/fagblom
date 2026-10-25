@@ -1,0 +1,3263 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fagblom</title>
+  <meta name="description" content="Fagblom: planlegg eksamenslesingen, logg studietid og samle poeng til studiedyret ditt.">
+  <meta name="theme-color" content="#fffdfa">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='%23c4868f'%3E%3Ccircle cx='20' cy='9' r='7'/%3E%3Ccircle cx='31' cy='17' r='7'/%3E%3Ccircle cx='27' cy='30' r='7'/%3E%3Ccircle cx='13' cy='30' r='7'/%3E%3Ccircle cx='9' cy='17' r='7'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='6' fill='%23e9cf8c'/%3E%3C/svg%3E">
+  <script>
+    /* Setter valgt tema før siden males, så den ikke blinker */
+    try {
+      var savedTheme = localStorage.getItem("studieplanlegger-theme");
+      if (savedTheme === "dark" || savedTheme === "light") document.documentElement.setAttribute("data-theme", savedTheme);
+    } catch (e) { /* lagring kan være blokkert */ }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+/* ---------- Farger (lyst og mørkt tema) ---------- */
+
+:root {
+  color-scheme: light;
+  --bg: #fffdfa;
+  --side: #f7f2e9;
+  --hover: #efe8db;
+  --col: #f8f4ec;
+  --surface: #ffffff;
+  --border: #e9e1d3;
+  --track: #eee6d8;
+  --text: #3b3336;
+  --muted: #7a6f6a;
+  --placeholder: #9a8f8a;
+  --rose: #c4868f;
+  --rose-deep: #a0586a;
+  --btn: #a0586a;
+  --btn-hover: #8b4a5a;
+  --rose-soft: #f8e8e7;
+  --alert-urgent: #f3d4d4;
+  --sage: #8ca07b;
+  --danger: #a23a4b;
+  --shadow: rgba(60, 40, 30, 0.06);
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Mørkt tema når nettleseren ber om det, med mindre du har valgt lyst */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #1b1718;
+    --side: #231e1f;
+    --hover: #322b2d;
+    --col: #241f21;
+    --surface: #2a2426;
+    --border: #3b3235;
+    --track: #3a3235;
+    --text: #efe6e7;
+    --muted: #ab9da0;
+    --placeholder: #8f8184;
+    --rose: #d79aa3;
+    --rose-deep: #e0a3ae;
+    --btn: #a85a6c;
+    --btn-hover: #bb6a7d;
+    --rose-soft: #3a2a2e;
+    --alert-urgent: #4d2a31;
+    --sage: #9bb08a;
+    --danger: #f0909d;
+    --shadow: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Mørkt tema når du har valgt det selv */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1718;
+  --side: #231e1f;
+  --hover: #322b2d;
+  --col: #241f21;
+  --surface: #2a2426;
+  --border: #3b3235;
+  --track: #3a3235;
+  --text: #efe6e7;
+  --muted: #ab9da0;
+  --placeholder: #8f8184;
+  --rose: #d79aa3;
+  --rose-deep: #e0a3ae;
+  --btn: #a85a6c;
+  --btn-hover: #bb6a7d;
+  --rose-soft: #3a2a2e;
+  --alert-urgent: #4d2a31;
+  --sage: #9bb08a;
+  --danger: #f0909d;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
+
+:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.muted { color: var(--muted); }
+
+/* ---------- Oppsett: sidemeny + innhold ---------- */
+
+.app { display: grid; grid-template-columns: 252px 1fr; min-height: 100vh; }
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 10px;
+  background: var(--side);
+  border-right: 1px solid var(--border);
+}
+
+.brand { display: flex; align-items: center; gap: 8px; padding: 4px 10px 12px; font-weight: 600; }
+.brand-icon { width: 22px; height: 22px; color: var(--rose); }
+
+.side-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.side-item:hover { background: var(--hover); }
+.side-item:disabled { color: var(--muted); cursor: default; background: none; }
+
+.side-label { margin: 14px 10px 4px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.side-courses { list-style: none; margin: 0; padding: 0; }
+.side-courses .empty { padding: 4px 10px; }
+.side-spacer { flex: 1; }
+.side-actions { border-top: 1px solid var(--border); padding-top: 8px; }
+.side-actions .side-item { color: var(--muted); }
+.side-actions .side-item:hover { color: var(--text); }
+
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--rose)); flex-shrink: 0; }
+
+main { min-width: 0; }
+main:focus { outline: none; }
+.page { max-width: 1120px; margin: 0 auto; padding: 40px 48px 80px; }
+.view[hidden] { display: none; }
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -64px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--btn);
+  color: #fff;
+  text-decoration: none;
+}
+.skip-link:focus { top: 12px; }
+
+.icon { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon.sm { width: 15px; height: 15px; }
+
+/* Hovedmeny */
+.nav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.nav-item .icon { color: var(--muted); }
+.nav-item:hover { background: var(--hover); }
+.nav-item[aria-current="page"] { background: var(--rose-soft); color: var(--rose-deep); }
+.nav-item[aria-current="page"] .icon { color: var(--rose-deep); }
+
+/* Sideoverskrift */
+.page-head { margin-bottom: 24px; }
+.eyebrow { margin: 0 0 4px; font-size: 13px; font-weight: 500; color: var(--rose-deep); letter-spacing: 0.02em; }
+h1 { margin: 0; font-size: 2rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; }
+.summary { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+h2 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
+
+/* Nøkkeltall */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 16px 0; }
+.tile {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.tile-top { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 500; }
+.tile-top .icon { width: 18px; height: 18px; color: var(--rose); }
+.tile-value { margin-top: 8px; font-size: 1.65rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.tile-sub { margin-top: 2px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.tile.urgent { background: var(--alert-urgent); border-color: transparent; }
+.tile.urgent .tile-value { color: var(--danger); }
+
+/* Oversikt */
+.home-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.panel-head h2 { margin: 0; font-size: 1.05rem; }
+.link { display: inline-flex; align-items: center; gap: 4px; color: var(--rose-deep); font-size: 13.5px; font-weight: 500; text-decoration: none; }
+.link:hover { text-decoration: underline; }
+.today-list { display: grid; gap: 8px; }
+.home-pet-row { display: flex; align-items: center; gap: 14px; }
+.home-pet-art { width: 96px; height: 96px; flex: none; overflow: hidden; border-radius: 50%; background: var(--rose-soft); border: 1px solid var(--border); }
+.home-pet-art svg { display: block; width: 100%; height: 100%; }
+.home-pet-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; flex: 1; }
+.home-pet-info .progress { width: 100%; flex: none; margin: 4px 0; }
+.guide { margin-bottom: 16px; }
+.guide h2 { margin-bottom: 8px; }
+.guide-steps { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; }
+
+/* Venner */
+.notice { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; padding: 12px 14px; border: 1px dashed var(--rose); border-radius: 10px; background: var(--rose-soft); }
+.notice strong { padding: 1px 10px; border-radius: 99px; background: var(--btn); color: #fff; font-size: 12px; line-height: 1.7; }
+.notice p { margin: 0; font-size: 13.5px; }
+.lb-summary { margin: 0 0 12px; font-weight: 600; }
+.seg-control { display: inline-flex; padding: 3px; margin-bottom: 14px; border-radius: 10px; background: var(--hover); }
+.seg-btn { padding: 6px 14px; border: none; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font-weight: 500; }
+.seg-btn[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px var(--shadow); }
+.leaderboard { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lb-row {
+  display: grid;
+  grid-template-columns: 30px 56px minmax(0, 1.2fr) minmax(120px, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.lb-row.you { border-color: var(--rose); background: var(--rose-soft); box-shadow: 0 0 0 1px var(--rose); }
+.rank { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--hover); color: var(--muted); font-size: 13px; font-weight: 700; }
+.rank-1 { background: #f2c14e; color: #4a3500; }
+.rank-2 { background: #cfd3da; color: #33363c; }
+.rank-3 { background: #d9a577; color: #4a2a0a; }
+.lb-art { width: 52px; height: 52px; overflow: hidden; border-radius: 50%; background: var(--rose-soft); border: 1px solid var(--border); }
+.lb-art svg { display: block; width: 100%; height: 100%; }
+.lb-initial { display: grid; place-items: center; font-weight: 700; color: var(--rose-deep); background: var(--surface); }
+.lb-name { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
+.lb-name .muted { flex-basis: 100%; font-size: 13px; }
+.lb-score { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lb-score .progress { flex: none; width: 100%; }
+
+/* Profil */
+#profile-stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.pet-panel, .shop-panel { margin-bottom: 16px; }
+#data-section h2 { margin-bottom: 6px; font-size: 1.05rem; }
+
+/* ---------- Knapper og felt ---------- */
+
+.btn {
+  display: inline-block;
+  padding: 6px 12px;
+  text-decoration: none;
+  border: 1px solid var(--btn);
+  border-radius: 6px;
+  background: var(--btn);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--btn-hover); border-color: var(--btn-hover); }
+.btn.secondary { background: transparent; color: var(--rose-deep); border-color: var(--border); }
+.btn.secondary:hover { background: var(--hover); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.secondary:disabled:hover { background: transparent; }
+
+input[type="text"], input[type="date"], input[type="number"], input:not([type]), select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+input[type="color"] {
+  width: 100%;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+input::placeholder { color: var(--placeholder); }
+
+button.danger {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 13px;
+}
+button.danger:hover { background: var(--rose-soft); }
+button.danger:disabled { opacity: 0.5; cursor: default; }
+
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.with-unit { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+.with-unit input { width: 76px; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.status { margin: 8px 0 0; min-height: 1.4em; font-size: 13px; color: var(--muted); }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.panel > h3:first-child { margin-bottom: 4px; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border: 1px solid transparent;
+  border-radius: 99px;
+  background: var(--hover);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+button.badge { cursor: pointer; }
+.badge.prio-high { background: var(--rose-soft); color: var(--danger); border-color: var(--rose); }
+.badge.prio-medium { background: var(--hover); color: var(--text); }
+.badge.prio-low { background: transparent; color: var(--muted); border-color: var(--border); }
+.badge.due.soon { background: var(--rose-soft); color: var(--rose-deep); }
+.badge.due.overdue { background: var(--alert-urgent); color: var(--danger); }
+.badge.goal { margin: 0; padding: 1px 8px; max-width: none; border-radius: 99px; background: var(--rose-soft); color: var(--rose-deep); }
+
+/* ---------- Varsler (callouts) ---------- */
+
+#alerts { margin-bottom: 4px; }
+.alert { padding: 10px 14px; margin-bottom: 8px; border-radius: 8px; background: var(--rose-soft); }
+.alert.urgent { background: var(--alert-urgent); }
+.alert strong { display: flex; align-items: center; gap: 8px; }
+.alert strong .icon { color: var(--danger); }
+.alert small { display: block; margin-left: 28px; color: var(--muted); }
+
+/* ---------- Ukeplan (tavle) ---------- */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(128px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.board .empty { grid-column: 1 / -1; }
+
+.day { background: var(--col); border-radius: 8px; padding: 8px; min-height: 120px; }
+.day-label { padding: 2px 4px 8px; font-size: 13px; font-weight: 600; }
+.day-label small { display: block; font-weight: 400; color: var(--muted); }
+.day.today .day-label { color: var(--rose-deep); }
+.day-items { display: flex; flex-direction: column; gap: 6px; }
+
+.chip {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c, var(--rose));
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px var(--shadow);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.chip strong { display: block; font-weight: 600; }
+.chip small { display: block; margin-top: 2px; color: var(--muted); }
+.chip.deadline { background: var(--rose-soft); border-style: dashed; border-left-style: solid; }
+.chip.deadline.overdue { background: var(--alert-urgent); }
+.chip.deadline.overdue strong { color: var(--danger); }
+.empty { color: var(--muted); font-size: 13px; }
+
+/* ---------- Emner (tabell) ---------- */
+
+.table { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+
+.table-head, .course > summary {
+  display: grid;
+  grid-template-columns: 2fr 0.9fr 1fr 1.3fr;
+  gap: 12px;
+  align-items: center;
+}
+.table-head { padding: 8px 14px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--side); }
+
+.course { border-bottom: 1px solid var(--border); }
+.course > summary { padding: 10px 14px; cursor: pointer; list-style: none; }
+.course > summary::-webkit-details-marker { display: none; }
+.course > summary:hover { background: var(--bg); }
+
+.cell.name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cell.name h3 { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chev { display: inline-block; width: 14px; flex-shrink: 0; text-align: center; line-height: 1; color: var(--muted); font-size: 12px; transition: transform 0.15s; }
+.chev::before { content: "▸"; }
+.course[open] .chev { transform: rotate(90deg); }
+.cell.date { color: var(--muted); font-size: 14px; }
+
+.countdown strong { font-weight: 600; }
+.countdown span { color: var(--muted); font-size: 13px; }
+.countdown.urgent strong { color: var(--danger); }
+.countdown.past strong { color: var(--muted); }
+
+.cell.prog { display: flex; align-items: center; gap: 8px; }
+.progress { flex: 1; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--c, var(--sage)); transition: width 0.3s; }
+.pct { font-size: 12.5px; color: var(--muted); white-space: nowrap; min-width: 62px; text-align: right; }
+
+.course-body { padding: 4px 14px 16px 36px; }
+.course-meta { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+
+/* Mål per emne */
+.goal { margin: 0 0 14px; padding: 12px; border-radius: 8px; background: var(--col); max-width: 640px; }
+.goal-fields { display: flex; flex-wrap: wrap; gap: 14px; }
+.goal .progress { flex: none; width: 100%; margin: 10px 0 0; }
+.goal-text { margin: 8px 0 0; font-size: 13.5px; }
+
+/* Oppgaver */
+.tasks { list-style: none; margin: 0 0 10px; padding: 0; }
+.tasks li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 4px 6px; border-radius: 6px; }
+.tasks li:hover { background: var(--col); }
+.tasks .task-text { flex: 1 1 140px; min-width: 0; overflow-wrap: anywhere; }
+.tasks li.done .task-text { color: var(--muted); text-decoration: line-through; }
+.tasks input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--btn); }
+
+.task-form {
+  display: grid;
+  grid-template-columns: 1fr 150px 120px auto;
+  gap: 8px;
+  max-width: 760px;
+}
+.course-body .actions { margin-top: 10px; }
+
+.new-row {
+  display: grid;
+  grid-template-columns: 2fr 0.9fr 44px auto;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg);
+}
+
+/* ---------- Studietid ---------- */
+
+.study-grid { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+
+.timer-display {
+  padding: 14px 0 6px;
+  text-align: center;
+  font-size: 3.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.timer-display.running { color: var(--rose-deep); }
+
+.presets { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 8px; margin: 6px 0 16px; }
+.pill {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.pill:hover { background: var(--hover); }
+.pill.active { border-color: var(--rose); background: var(--rose-soft); color: var(--rose-deep); }
+.pill:disabled { opacity: 0.5; cursor: default; }
+
+.timer-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+.manual { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.manual h3 { margin-bottom: 8px; }
+.manual-row { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; align-items: end; }
+
+.chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; margin: 12px 0 8px; }
+.bar-col { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+.bar-stack {
+  display: flex;
+  flex-direction: column-reverse;
+  width: 100%;
+  max-width: 38px;
+  height: 120px;
+  border-radius: 6px;
+  background: var(--track);
+  overflow: hidden;
+}
+.bar-stack .seg { width: 100%; flex: none; }
+.bar-label { font-size: 12px; color: var(--muted); text-transform: capitalize; }
+.bar-col.today .bar-label { color: var(--rose-deep); font-weight: 600; }
+.bar-value { font-size: 11px; color: var(--muted); }
+
+.legend, .session-list { list-style: none; margin: 8px 0 14px; padding: 0; font-size: 14px; }
+.legend li, .session-list li { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.session-list li { border-bottom: 1px dashed var(--border); }
+.session-list li.empty { border-bottom: none; }
+.session-list .when { width: 54px; color: var(--muted); font-size: 13px; }
+.grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mins { color: var(--muted); white-space: nowrap; }
+.stats-panel h3 { margin-top: 6px; }
+.stats-panel h3 + p { margin: 2px 0 0; font-size: 13.5px; }
+
+/* ---------- Studiedyr ---------- */
+
+.pet-panel { --c: var(--rose); }
+.pet-view { display: grid; grid-template-columns: 170px 1fr; gap: 22px; align-items: center; }
+.pet-left { display: flex; justify-content: center; }
+.pet-stage, .shop-art, .animal-art {
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--rose-soft);
+  border: 1px solid var(--border);
+}
+.pet-stage { width: 160px; height: 160px; }
+.pet-stage svg, .shop-art svg, .animal-art svg { display: block; width: 100%; height: 100%; }
+.pet-stage svg { animation: bob 3.4s ease-in-out infinite; transform-origin: 50% 90%; }
+.pet-stage.level-up svg { animation: hop 0.9s ease; }
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes hop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18) rotate(-5deg); }
+  65% { transform: scale(0.97) rotate(3deg); }
+  100% { transform: scale(1); }
+}
+.pet-info h3 { font-size: 20px; }
+.pet-level { margin: 0 0 6px; color: var(--rose-deep); font-weight: 600; }
+.pet-info .progress { margin: 6px 0 10px; }
+.pet-balance { margin: 0 0 6px; }
+.badge.points { background: var(--rose-soft); color: var(--rose-deep); border-color: var(--rose); font-size: 13.5px; padding: 2px 12px; }
+.pet-text { margin: 6px 0 0; font-size: 13.5px; }
+
+.pet-edit { margin-top: 12px; }
+.pet-edit summary { cursor: pointer; color: var(--rose-deep); font-size: 13.5px; }
+
+.animals { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 12px 0; }
+.animal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.animal:hover { background: var(--hover); }
+.animal[aria-pressed="true"] { border-color: var(--rose); background: var(--rose-soft); box-shadow: 0 0 0 1px var(--rose); }
+.animal-art { width: 68px; height: 68px; background: var(--col); }
+.animal-label { font-size: 12.5px; color: var(--muted); text-align: center; }
+.animal[aria-pressed="true"] .animal-label { color: var(--rose-deep); font-weight: 600; }
+.pet-form-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pet-form-row input { flex: 1 1 180px; min-width: 0; max-width: 280px; }
+
+/* Butikk */
+.shop { margin: 0; }
+.shop > p { margin: 2px 0 6px; font-size: 13.5px; }
+.shop h4 { margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.shop-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; }
+.shop-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: center;
+}
+.shop-item.worn { border-color: var(--rose); box-shadow: 0 0 0 1px var(--rose); }
+.shop-item strong { font-size: 14px; font-weight: 600; }
+.shop-item .muted { font-size: 12.5px; }
+.shop-item .btn { margin-top: 6px; width: 100%; padding: 5px 8px; }
+.shop-art { width: 84px; height: 84px; margin-bottom: 6px; }
+
+/* Liten melding nederst: poeng, nivå og kjøp */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 50;
+  max-width: min(92vw, 420px);
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+  box-shadow: 0 6px 20px var(--shadow);
+  transform: translate(-50%, 16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast:empty { display: none; }
+
+footer { margin-top: 56px; color: var(--muted); font-size: 13px; }
+
+/* ---------- Mobil og nettbrett ---------- */
+
+.menu-btn { display: none; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+
+  /* Toppstolpe med navn og meny */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: auto;
+    overflow: visible;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    padding: 6px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { flex: 1; padding: 2px 0; font-size: 16px; }
+  .menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .menu-btn:hover, .sidebar.menu-open .menu-btn { background: var(--hover); }
+
+  .side-label, .side-courses, .side-spacer { display: none; }
+  .side-actions { display: none; width: 100%; margin: 4px 0 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .sidebar.menu-open .side-actions { display: flex; flex-direction: column; }
+  .side-actions .side-item { padding: 12px 10px; font-size: 15px; color: var(--text); }
+
+  /* Fane-meny nederst, som i en vanlig app */
+  .nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    flex-direction: row;
+    gap: 0;
+    margin: 0;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    background: var(--side);
+    border-top: 1px solid var(--border);
+  }
+  .nav-item { flex: 1; min-width: 0; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 2px; border-radius: 10px; font-size: 11px; text-align: center; }
+  .nav-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .page { padding: 20px 16px calc(88px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 1.7rem; }
+  .page-head { margin-bottom: 16px; }
+  .summary { font-size: 14px; }
+
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+  .tile { padding: 12px; }
+  .tile-value { font-size: 1.3rem; }
+  .home-grid { grid-template-columns: minmax(0, 1fr); }
+
+  /* Ukeplanen blir en liste i stedet for en tavle man må bla sidelengs */
+  .board { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); overflow: visible; padding-bottom: 0; }
+  .day { min-height: 0; padding: 10px 12px 12px; }
+  .day-label { display: flex; align-items: baseline; gap: 8px; padding: 0 0 8px; font-size: 15px; }
+  .day-label small { display: inline; }
+  .chip { font-size: 14px; padding: 9px 11px; }
+  .chip small { font-size: 12.5px; }
+
+  .study-grid { grid-template-columns: minmax(0, 1fr); }
+  .lb-row { grid-template-columns: 28px 46px minmax(0, 1fr); gap: 10px; }
+  .lb-score { grid-column: 2 / -1; }
+  .toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
+  footer { margin-top: 32px; }
+}
+
+@media (max-width: 640px) {
+  .table-head { display: none; }
+  .course > summary { grid-template-columns: 1fr auto; row-gap: 8px; padding: 14px; }
+  .cell.date { display: none; }
+  .cell.prog { grid-column: 1 / -1; }
+  .cell.name h3 { white-space: normal; overflow: visible; font-size: 16px; }
+
+  .course-body { padding: 2px 14px 16px; }
+  .tasks li { padding: 8px 4px; }
+  .tasks input[type="checkbox"] { width: 20px; height: 20px; }
+  .tasks button.danger { padding: 8px 12px; }
+
+  /* Større felt og knapper som er enkle å trykke på (16px hindrer zoom på iPhone) */
+  input, select, .btn, .pill { font-size: 16px; }
+  .new-row input, .new-row .btn, .task-form input, .task-form select, .task-form .btn,
+  .manual input, .manual .btn, .pet-form input, .pet-form .btn, .timer-actions .btn,
+  #timer-course, .goal input, .goal select { min-height: 44px; }
+  .pill { min-height: 40px; }
+
+  .new-row { grid-template-columns: 1fr 56px; gap: 10px; padding: 14px; }
+  .new-row input[type="text"], .new-row input:not([type]), .new-row .btn { grid-column: 1 / -1; }
+  .new-row input[type="color"] { height: 44px; }
+
+  .task-form { grid-template-columns: 1fr 1fr; max-width: none; }
+  .task-form input[type="text"], .task-form .btn { grid-column: 1 / -1; }
+
+  .manual-row { grid-template-columns: 1fr 1fr; }
+  .manual-row .btn { grid-column: 1 / -1; }
+
+  .timer-display { font-size: 3rem; }
+  .pet-view { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .pet-stage { width: 150px; height: 150px; }
+  .shop-items { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .shop-item .btn { min-height: 44px; }
+  .animals { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+  .pet-info { width: 100%; }
+  .pet-form-row input { max-width: none; }
+  .goal-fields > .field { flex: 1 1 130px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .chev, .progress > div { transition: none; }
+  .pet-stage svg, .pet-stage.level-up svg { animation: none; }
+  .toast { transition: none; }
+}
+
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="flower" viewBox="0 0 40 40">
+        <g fill="currentColor" fill-opacity="0.95" stroke="rgba(110,55,65,0.28)" stroke-width="0.6">
+          <ellipse cx="20" cy="9.5" rx="6.5" ry="9"/>
+          <ellipse cx="20" cy="9.5" rx="6.5" ry="9" transform="rotate(72 20 20)"/>
+          <ellipse cx="20" cy="9.5" rx="6.5" ry="9" transform="rotate(144 20 20)"/>
+          <ellipse cx="20" cy="9.5" rx="6.5" ry="9" transform="rotate(216 20 20)"/>
+          <ellipse cx="20" cy="9.5" rx="6.5" ry="9" transform="rotate(288 20 20)"/>
+        </g>
+        <circle cx="20" cy="20" r="4.6" fill="#e9cf8c" stroke="rgba(120,90,30,0.35)" stroke-width="0.6"/>
+      </symbol>
+      <!-- Ikoner (strek) -->
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5zM5 18.5A1.5 1.5 0 0 0 6.5 20H19v-3M9 7h6"/></symbol>
+      <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9.5" cy="8" r="3.5"/><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-6A3.5 3.5 0 0 0 3 18.5V20M16 4.7a3.5 3.5 0 0 1 0 6.6M21 20v-1.5a3.5 3.5 0 0 0-2.5-3.35"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-1a6 6 0 0 1 6-6h3a6 6 0 0 1 6 6v1"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7 2.5 7h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0"/></symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 2.5 1.5 2.5C10 9 11 6 12 3z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16 9.5"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8.5 20h7M12 17v3"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    </defs>
+  </svg>
+
+  <a class="skip-link" href="#main">Hopp til innholdet</a>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 40 40" aria-hidden="true"><use href="#flower"/></svg>
+        <span>Fagblom</span>
+        <button id="menu-btn" class="menu-btn" type="button" aria-expanded="false" aria-controls="side-actions" aria-label="Meny">
+          <svg class="icon" aria-hidden="true"><use href="#i-more"/></svg>
+        </button>
+      </div>
+
+      <nav class="nav" id="nav" aria-label="Hovedmeny">
+        <a class="nav-item" data-page="home" href="#/"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span>Oversikt</span></a>
+        <a class="nav-item" data-page="plan" href="#/plan"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Ukeplan</span></a>
+        <a class="nav-item" data-page="courses" href="#/emner"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg><span>Emner</span></a>
+        <a class="nav-item" data-page="study" href="#/studietid"><svg class="icon" aria-hidden="true"><use href="#i-timer"/></svg><span>Studietid</span></a>
+        <a class="nav-item" data-page="friends" href="#/venner"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>Venner</span></a>
+        <a class="nav-item" data-page="profile" href="#/profil"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg><span>Profil</span></a>
+      </nav>
+
+      <div class="side-label">Mine emner</div>
+      <ul id="side-courses" class="side-courses"></ul>
+
+      <div class="side-spacer"></div>
+
+      <div class="side-actions" id="side-actions">
+        <button id="demo-btn" class="side-item" type="button">Fyll inn demodata</button>
+        <button id="notify-btn" class="side-item" type="button">Slå på nettleservarsler</button>
+        <button id="theme-btn" class="side-item" type="button">Mørk modus</button>
+        <button id="clear-btn" class="side-item" type="button">Slett alt</button>
+      </div>
+    </aside>
+
+    <main id="main" tabindex="-1">
+      <div class="page">
+
+        <!-- Oversikt -->
+        <section class="view" id="view-home" data-page="home" aria-labelledby="h-home">
+          <header class="page-head">
+            <p class="eyebrow" id="home-date"></p>
+            <h1 id="h-home">Oversikt</h1>
+            <p id="summary" class="summary"></p>
+          </header>
+
+          <div id="start-guide"></div>
+          <section id="alerts" aria-live="polite" aria-label="Varsler"></section>
+          <div id="home-tiles" class="tiles"></div>
+
+          <div class="home-grid">
+            <section class="panel" aria-labelledby="h-today">
+              <div class="panel-head">
+                <h2 id="h-today">Dagens plan</h2>
+                <a class="link" href="#/plan">Hele uken <svg class="icon sm" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+              </div>
+              <div id="home-today" class="today-list"></div>
+            </section>
+            <section class="panel home-pet" aria-labelledby="h-homepet">
+              <div class="panel-head">
+                <h2 id="h-homepet">Studiedyret</h2>
+                <a class="link" href="#/profil">Profil <svg class="icon sm" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+              </div>
+              <div id="home-pet"></div>
+            </section>
+          </div>
+        </section>
+
+        <!-- Ukeplan -->
+        <section class="view" id="view-plan" data-page="plan" aria-labelledby="h-plan" hidden>
+          <header class="page-head">
+            <h1 id="h-plan">Ukeplan</h1>
+            <p class="summary">Forslag til hva du bør lese de neste sju dagene. Planen tar hensyn til eksamensdato, frister, prioritet og hvor mye som gjenstår.</p>
+          </header>
+          <div id="plan" class="board"></div>
+        </section>
+
+        <!-- Emner -->
+        <section class="view" id="view-courses" data-page="courses" aria-labelledby="h-courses" hidden>
+          <header class="page-head">
+            <h1 id="h-courses">Emner</h1>
+            <p class="summary">Legg inn eksamensdato, oppgaver med frist og prioritet, og et mål for hvor mye du vil lese.</p>
+          </header>
+          <div class="table">
+            <div class="table-head" aria-hidden="true">
+              <span>Emne</span><span>Eksamen</span><span>Nedtelling</span><span>Fremdrift</span>
+            </div>
+            <div id="courses"></div>
+            <form id="course-form" class="new-row">
+              <input id="course-name" required maxlength="60" placeholder="Nytt emne, f.eks. ITPE3200" aria-label="Emnenavn">
+              <input id="course-date" type="date" required aria-label="Eksamensdato">
+              <input id="course-color" type="color" value="#c98a8f" aria-label="Farge">
+              <button type="submit" class="btn">Legg til</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Studietid -->
+        <section class="view" id="view-study" data-page="study" aria-labelledby="h-study" hidden>
+          <header class="page-head">
+            <h1 id="h-study">Studietid</h1>
+            <p class="summary">Start timeren når du begynner å lese, eller logg tid i etterkant. Hver økt gir poeng til studiedyret.</p>
+          </header>
+          <div class="study-grid">
+            <div class="panel timer-panel">
+              <label class="field">Emne
+                <select id="timer-course"></select>
+              </label>
+
+              <div id="timer-display" class="timer-display" role="timer" aria-label="Gjenstående tid">25:00</div>
+
+              <div class="presets" role="group" aria-label="Lengde på økten">
+                <button type="button" class="pill preset" data-min="15">15 min</button>
+                <button type="button" class="pill preset" data-min="25">25 min</button>
+                <button type="button" class="pill preset" data-min="50">50 min</button>
+                <label class="field custom">Egen lengde
+                  <span class="with-unit"><input id="timer-custom" type="number" min="1" max="180" step="1" value="25"> min</span>
+                </label>
+              </div>
+
+              <div class="timer-actions">
+                <button id="timer-start" type="button" class="btn">Start</button>
+                <button id="timer-finish" type="button" class="btn secondary">Fullfør og logg</button>
+                <button id="timer-reset" type="button" class="danger">Nullstill</button>
+              </div>
+              <p id="timer-status" class="status" role="status" aria-live="polite"></p>
+
+              <form id="manual-form" class="manual">
+                <h3>Logg tid manuelt</h3>
+                <div class="manual-row">
+                  <label class="field">Minutter
+                    <input id="manual-minutes" type="number" min="1" max="1440" step="1" required placeholder="45">
+                  </label>
+                  <label class="field">Dato
+                    <input id="manual-date" type="date" required>
+                  </label>
+                  <button type="submit" class="btn secondary">Logg tid</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="panel stats-panel">
+              <h3>Siste 7 dager</h3>
+              <p id="stats-total" class="muted"></p>
+              <div id="stats-chart" class="chart"></div>
+              <ul id="stats-legend" class="legend"></ul>
+              <h3>Siste økter</h3>
+              <ul id="sessions-list" class="session-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Venner -->
+        <section class="view" id="view-friends" data-page="friends" aria-labelledby="h-friends" hidden>
+          <header class="page-head">
+            <h1 id="h-friends">Venner</h1>
+            <p class="summary">Se hvem som har studert mest denne uken.</p>
+          </header>
+          <div class="notice" role="note">
+            <strong>Demo</strong>
+            <p>Vennene her er oppdiktet. Å legge til ekte venner og dele statistikk krever en server med innlogging, og det er ikke med i denne versjonen. Dine egne tall er ekte og hentes fra det du har logget.</p>
+          </div>
+          <div id="lb-summary" class="lb-summary"></div>
+          <div class="seg-control" role="group" aria-label="Sorter topplisten">
+            <button type="button" class="seg-btn" data-sort="week" aria-pressed="true">Siste 7 dager</button>
+            <button type="button" class="seg-btn" data-sort="level" aria-pressed="false">Høyeste nivå</button>
+          </div>
+          <ol id="leaderboard" class="leaderboard"></ol>
+        </section>
+
+        <!-- Profil -->
+        <section class="view" id="view-profile" data-page="profile" aria-labelledby="h-profile" hidden>
+          <header class="page-head">
+            <h1 id="h-profile">Profil</h1>
+            <p class="summary">Dyret ditt, statistikken din og butikken der du bruker poengene.</p>
+          </header>
+
+          <div id="pet-panel" class="panel pet-panel"></div>
+          <div id="profile-stats" class="tiles"></div>
+          <div id="shop-panel" class="panel shop-panel"></div>
+
+          <section class="panel" id="data-section" aria-labelledby="h-data">
+            <h2 id="h-data">Data og sikkerhetskopi</h2>
+            <p class="muted">Alt lagres kun i nettleseren din. Last ned en sikkerhetskopi, flytt dataene til en annen enhet, eller legg eksamener og frister i kalenderen din.</p>
+            <div class="actions">
+              <button id="export-btn" type="button" class="btn secondary">Last ned sikkerhetskopi (.json)</button>
+              <button id="import-btn" type="button" class="btn secondary">Importer sikkerhetskopi</button>
+              <button id="ics-btn" type="button" class="btn secondary">Legg i kalender (.ics)</button>
+              <input id="import-file" type="file" accept=".json,application/json" hidden>
+            </div>
+            <p id="data-status" class="status" role="status" aria-live="polite"></p>
+          </section>
+        </section>
+
+        <footer>Fagblom · Data lagres kun i nettleseren din.</footer>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+"use strict";
+
+/* =====================================================================
+   Fagblom
+   Emner, oppgaver med frist og prioritet, mål, studietid, plan, eksport.
+   All data lagres i nettleseren (localStorage). Ingenting sendes noe sted.
+   ===================================================================== */
+
+/* ---------- Konstanter ---------- */
+
+const STORAGE_KEY = "studieplanlegger-v2";
+const OLD_STORAGE_KEY = "studieplanlegger-v1";
+const THEME_KEY = "studieplanlegger-theme";
+const TIMER_KEY = "studieplanlegger-timer";
+const NOTIFIED_KEY = "studieplanlegger-notified";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const PLAN_DAYS = 7;
+const MAX_COURSES_PER_DAY = 2;
+const ALERT_DAYS = 7;
+const DEFAULT_COLOR = "#c98a8f";
+const DEFAULT_TIMER_MIN = 25;
+const GRADES = ["A", "B", "C", "D", "E"];
+const PRIORITIES = {
+  high: { label: "Høy", rank: 3 },
+  medium: { label: "Middels", rank: 2 },
+  low: { label: "Lav", rank: 1 }
+};
+const PRIORITY_ORDER = ["high", "medium", "low"];
+const ID_RE = /^[\w-]{1,40}$/;
+const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+/* Studiedyret: 1 poeng for hvert 5. minutt, pluss poeng for ferdige oppgaver.
+   Nivå n begynner på 10 × (n−1)² poeng. Nivået teller alle poeng du har tjent, også de du har brukt. */
+const MIN_PER_POINT = 5;
+const MAX_LEVEL = 10;
+const TASK_POINTS = { high: 8, medium: 5, low: 3 };
+
+const ANIMALS = [
+  { id: "cat-orange", kind: "cat", label: "Oransje katt", name: "Misse", fur: "#e9a35c", light: "#fbe6cc", dark: "#c8772f", inner: "#f2b3ae", nose: "#d9788a", stripes: true },
+  { id: "cat-black", kind: "cat", label: "Svart katt", name: "Sot", fur: "#45434d", light: "#6a6874", dark: "#2d2c33", inner: "#c98d9a", nose: "#d9788a", iris: "#b8d86a" },
+  { id: "dog-brown", kind: "dog", label: "Brun hund", name: "Fido", fur: "#b97f4d", light: "#ecd3b1", dark: "#7f5230", ear: "#80522f", nose: "#2b2326" },
+  { id: "dog-spot", kind: "dog", label: "Flekkete hund", name: "Pluto", fur: "#f5f0e8", light: "#fffaf2", dark: "#8a5a35", ear: "#8a5a35", nose: "#2b2326", patch: true },
+  { id: "fox", kind: "fox", label: "Rev", name: "Rolf", fur: "#e2742f", light: "#fff0dc" },
+  { id: "penguin", kind: "penguin", label: "Pingvin", name: "Pingo" },
+  { id: "panda", kind: "panda", label: "Panda", name: "Bamse" },
+  { id: "rabbit", kind: "rabbit", label: "Kanin", name: "Lotte", fur: "#efe8e0", light: "#fffaf5", inner: "#f2b3be" }
+];
+/* Eldre lagringer brukte kortere navn på dyrene */
+const ANIMAL_ALIASES = { cat: "cat-orange", dog: "dog-brown" };
+
+/* Livsstadier: dyret blir eldre jo høyere nivå */
+const STAGES = [
+  { from: 1, key: "baby", name: "Baby", adj: "en baby" },
+  { from: 3, key: "young", name: "Ung", adj: "ung" },
+  { from: 6, key: "adult", name: "Voksen", adj: "voksen" },
+  { from: 9, key: "elder", name: "Gammel og klok", adj: "gammel og klok" }
+];
+
+/* Butikken: tilbehør og bakgrunner du kjøper med poeng */
+const SLOTS = [
+  { id: "head", label: "Hode" },
+  { id: "face", label: "Ansikt" },
+  { id: "neck", label: "Hals" },
+  { id: "bg", label: "Bakgrunn" }
+];
+const SHOP = [
+  { id: "bow", slot: "head", name: "Sløyfe", price: 10 },
+  { id: "party", slot: "head", name: "Festhatt", price: 20 },
+  { id: "cap", slot: "head", name: "Studenthue", price: 40 },
+  { id: "crown", slot: "head", name: "Krone", price: 60 },
+  { id: "glasses", slot: "face", name: "Briller", price: 20 },
+  { id: "shades", slot: "face", name: "Solbriller", price: 30 },
+  { id: "bowtie", slot: "neck", name: "Flue", price: 15 },
+  { id: "scarf", slot: "neck", name: "Skjerf", price: 25 },
+  { id: "meadow", slot: "bg", name: "Eng", price: 15 },
+  { id: "night", slot: "bg", name: "Natthimmel", price: 30 },
+  { id: "sunset", slot: "bg", name: "Solnedgang", price: 30 }
+];
+
+/* ---------- Tilstand ---------- */
+
+const loaded = load();
+let courses = loaded.courses;      // emner med oppgaver og mål
+let sessions = loaded.sessions;    // loggført studietid
+let pet = loaded.pet;              // studiedyret ({ animal, name }) eller null
+let wallet = loaded.wallet;        // poeng fra oppgaver, brukte poeng, eide ting og det dyret har på seg
+let toastTimer = null;
+let timer = loadTimer();           // timeren (huskes hvis du laster siden på nytt)
+const openIds = new Set();         // hvilke emner som er åpnet i tabellen
+let pendingFocus = null;           // hvilket felt som skal få fokus etter ny tegning
+let tickHandle = null;
+let petBounce = false;             // dyret hopper når det går opp et nivå
+
+/* ---------- Små hjelpere ---------- */
+
+function newId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function cleanText(v, max) {
+  return typeof v === "string" ? v.trim().slice(0, max) : "";
+}
+
+function clampNumber(v, min, max) {
+  const n = parseFloat(v);
+  if (!Number.isFinite(n)) return min;
+  return Math.round(Math.min(max, Math.max(min, n)) * 10) / 10;
+}
+
+function clampInt(v, min, max, fallback) {
+  const n = Math.round(parseFloat(v));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function isPriority(p) {
+  return Object.prototype.hasOwnProperty.call(PRIORITIES, p);
+}
+
+function courseById(id) {
+  return courses.find(c => c.id === id) || null;
+}
+
+/* ---------- Dato og tid ---------- */
+
+function startOfDay(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function parseDate(str) {
+  // "2026-12-05" -> lokal dato (unngår tidssone-feil)
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function addDays(d, n) {
+  // Kalenderdager (ikke 24 timer), slik at sommertid/vintertid ikke gir feil dag
+  const x = startOfDay(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function daysBetween(from, to) {
+  return Math.round((startOfDay(to) - startOfDay(from)) / DAY_MS);
+}
+
+function toISO(d) {
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+}
+
+function isValidISO(s) {
+  if (typeof s !== "string" || !ISO_RE.test(s)) return false;
+  return toISO(parseDate(s)) === s; // avviser f.eks. 2026-02-31
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString("nb-NO", { day: "numeric", month: "short" });
+}
+
+function formatLongDate(d) {
+  return d.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatWeekday(d) {
+  const name = d.toLocaleDateString("nb-NO", { weekday: "long" });
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function formatMinutes(min) {
+  min = Math.round(min);
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return m + " min";
+  if (m === 0) return h + " t";
+  return h + " t " + m + " min";
+}
+
+function hoursText(min) {
+  return (Math.round(min / 6) / 10).toString().replace(".", ",");
+}
+
+function formatClock(ms) {
+  const s = Math.ceil(ms / 1000);
+  return pad2(Math.floor(s / 60)) + ":" + pad2(s % 60);
+}
+
+function whenText(left) {
+  if (left === 0) return "i dag";
+  if (left === 1) return "i morgen";
+  return "om " + left + " dager";
+}
+
+/* ---------- Lagring og rensing av data ---------- */
+
+/**
+ * Sjekker og renser data fra lagring eller fra en importert fil.
+ * Alt som ikke ser riktig ut blir fjernet eller satt til en trygg standardverdi,
+ * slik at en dårlig fil ikke kan ødelegge appen.
+ */
+function sanitizeData(raw) {
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.courses)) {
+    throw new Error("Ugyldig format");
+  }
+
+  const usedIds = new Set();
+  const cleanCourses = [];
+
+  raw.courses.slice(0, 100).forEach(c => {
+    if (!c || typeof c !== "object") return;
+    const name = cleanText(c.name, 60);
+    if (!name || !isValidISO(c.date)) return;
+
+    let id = typeof c.id === "string" && ID_RE.test(c.id) ? c.id : newId();
+    if (usedIds.has(id)) id = newId();
+    usedIds.add(id);
+
+    const tasks = (Array.isArray(c.tasks) ? c.tasks : []).slice(0, 300).map(t => {
+      if (!t || typeof t !== "object") return null;
+      const text = cleanText(t.text, 80);
+      if (!text) return null;
+      return {
+        id: typeof t.id === "string" && ID_RE.test(t.id) ? t.id : newId(),
+        text,
+        done: t.done === true,
+        due: isValidISO(t.due) ? t.due : "",
+        priority: isPriority(t.priority) ? t.priority : "medium",
+        rewarded: t.rewarded === true
+      };
+    }).filter(Boolean);
+
+    cleanCourses.push({
+      id,
+      name,
+      date: c.date,
+      color: typeof c.color === "string" && COLOR_RE.test(c.color) ? c.color : DEFAULT_COLOR,
+      tasks,
+      goalGrade: GRADES.includes(c.goalGrade) ? c.goalGrade : "",
+      goalHours: clampNumber(c.goalHours, 0, 1000)
+    });
+  });
+
+  const courseIds = new Set(cleanCourses.map(c => c.id));
+  const cleanSessions = (Array.isArray(raw.sessions) ? raw.sessions : []).slice(0, 5000).map(s => {
+    if (!s || typeof s !== "object" || !courseIds.has(s.courseId) || !isValidISO(s.date)) return null;
+    const minutes = Math.round(Number(s.minutes));
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > 1440) return null;
+    return {
+      id: typeof s.id === "string" && ID_RE.test(s.id) ? s.id : newId(),
+      courseId: s.courseId,
+      date: s.date,
+      minutes
+    };
+  }).filter(Boolean);
+
+  let cleanPet = null;
+  let animal = null;
+  if (raw.pet && typeof raw.pet === "object" && typeof raw.pet.animal === "string") {
+    const key = Object.prototype.hasOwnProperty.call(ANIMAL_ALIASES, raw.pet.animal) ? ANIMAL_ALIASES[raw.pet.animal] : raw.pet.animal;
+    animal = animalById(key);
+  }
+  if (animal) cleanPet = { animal: animal.id, name: cleanText(raw.pet.name, 20) || animal.name };
+
+  return { courses: cleanCourses, sessions: cleanSessions, pet: cleanPet, wallet: sanitizeWallet(raw.wallet) };
+}
+
+/** Poengbok og tilbehør: kun kjente ting som du eier kan være på dyret. */
+function sanitizeWallet(w) {
+  const raw = w && typeof w === "object" ? w : {};
+  const owned = [];
+  (Array.isArray(raw.owned) ? raw.owned : []).forEach(id => {
+    if (typeof id === "string" && itemById(id) && !owned.includes(id)) owned.push(id);
+  });
+  const equipped = { head: "", face: "", neck: "", bg: "" };
+  const eq = raw.equipped && typeof raw.equipped === "object" ? raw.equipped : {};
+  SLOTS.forEach(slot => {
+    const id = eq[slot.id];
+    const item = typeof id === "string" ? itemById(id) : null;
+    if (item && item.slot === slot.id && owned.includes(id)) equipped[slot.id] = id;
+  });
+  return { bonus: clampInt(raw.bonus, 0, 100000, 0), spent: clampInt(raw.spent, 0, 100000, 0), owned, equipped };
+}
+
+function emptyWallet() {
+  return sanitizeWallet(null);
+}
+
+function load() {
+  try {
+    const v2 = localStorage.getItem(STORAGE_KEY);
+    if (v2) return sanitizeData(JSON.parse(v2));
+    // Eldre versjon lagret bare en liste med emner
+    const v1 = JSON.parse(localStorage.getItem(OLD_STORAGE_KEY));
+    if (Array.isArray(v1)) return sanitizeData({ courses: v1, sessions: [] });
+  } catch (e) {
+    /* tom eller ødelagt lagring: start på nytt */
+  }
+  return { courses: [], sessions: [], pet: null, wallet: emptyWallet() };
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, courses, sessions, pet, wallet }));
+  } catch (e) {
+    /* localStorage kan være blokkert, appen fungerer fortsatt i denne økten */
+  }
+}
+
+/* ---------- Oppgaver: frist og prioritet ---------- */
+
+function compareTasks(a, b) {
+  // Tidligste frist først, deretter høyest prioritet. Oppgaver uten frist kommer sist.
+  const da = a.due || "9999-99-99";
+  const db = b.due || "9999-99-99";
+  if (da !== db) return da < db ? -1 : 1;
+  return PRIORITIES[b.priority].rank - PRIORITIES[a.priority].rank;
+}
+
+function sortedTasks(course) {
+  const open = course.tasks.filter(t => !t.done).sort(compareTasks);
+  const done = course.tasks.filter(t => t.done);
+  return open.concat(done);
+}
+
+function nextTaskOf(course) {
+  return course.tasks.filter(t => !t.done).sort(compareTasks)[0] || null;
+}
+
+function dueInfo(task) {
+  if (!task.due) return null;
+  const date = parseDate(task.due);
+  const diff = daysBetween(new Date(), date);
+  if (task.done) return { text: "Frist " + formatDate(date), overdue: false, soon: false };
+  if (diff < 0) return { text: "Forfalt " + formatDate(date), overdue: true, soon: false };
+  if (diff === 0) return { text: "Frist i dag", overdue: false, soon: true };
+  if (diff === 1) return { text: "Frist i morgen", overdue: false, soon: true };
+  return { text: "Frist " + formatDate(date), overdue: false, soon: false };
+}
+
+/* ---------- Fremdrift, mål og studietid ---------- */
+
+function progressOf(course) {
+  const total = course.tasks.length;
+  const done = course.tasks.filter(t => t.done).length;
+  return { total, done, pct: total === 0 ? 0 : Math.round((done / total) * 100) };
+}
+
+function daysLeft(course) {
+  return daysBetween(new Date(), parseDate(course.date));
+}
+
+function minutesFor(courseId) {
+  return sessions.reduce((sum, s) => (s.courseId === courseId ? sum + s.minutes : sum), 0);
+}
+
+function minutesOnDate(iso) {
+  return sessions.reduce((sum, s) => (s.date === iso ? sum + s.minutes : sum), 0);
+}
+
+/* Poeng og nivå følger studietiden din, ikke dyret. Bytter du dyr, beholder du nivået. */
+
+function animalById(id) {
+  return ANIMALS.find(a => a.id === id) || null;
+}
+
+/** Alle poeng du har tjent: studietid pluss ferdige oppgaver. */
+function totalPoints() {
+  return Math.floor(sessions.reduce((sum, s) => sum + s.minutes, 0) / MIN_PER_POINT) + wallet.bonus;
+}
+
+function levelInfo(points) {
+  const level = Math.min(MAX_LEVEL, Math.floor(Math.sqrt(points / 10)) + 1);
+  const start = 10 * (level - 1) * (level - 1);
+  const next = level >= MAX_LEVEL ? null : 10 * level * level;
+  return {
+    level,
+    points,
+    start,
+    next,
+    pct: next === null ? 100 : Math.round(((points - start) / (next - start)) * 100),
+    toNext: next === null ? 0 : next - points
+  };
+}
+
+/** Timemålet: hvor mye du har brukt, hvor mye som er igjen og ca. hvor mye per dag. */
+function goalInfo(course) {
+  const goalMin = Math.round((course.goalHours || 0) * 60);
+  const done = minutesFor(course.id);
+  const left = Math.max(0, goalMin - done);
+  const days = daysLeft(course);
+  return {
+    goalMin,
+    done,
+    left,
+    pct: goalMin > 0 ? Math.min(100, Math.round((done / goalMin) * 100)) : 0,
+    perDay: days >= 0 ? Math.ceil(left / Math.max(1, days)) : 0
+  };
+}
+
+/** Hvor stor del som gjenstår (0 til 1), ut fra oppgaver og timemål. */
+function remainingShare(course) {
+  const parts = [];
+  const p = progressOf(course);
+  if (p.total > 0) parts.push(1 - p.pct / 100);
+  const g = goalInfo(course);
+  if (g.goalMin > 0) parts.push(1 - g.pct / 100);
+  if (parts.length === 0) return 1;
+  return parts.reduce((a, b) => a + b, 0) / parts.length;
+}
+
+function rowProgress(course) {
+  const t = progressOf(course);
+  if (t.total > 0) return { pct: t.pct, label: t.done + " av " + t.total };
+  const g = goalInfo(course);
+  if (g.goalMin > 0) return { pct: g.pct, label: hoursText(g.done) + " / " + hoursText(g.goalMin) + " t" };
+  return { pct: 0, label: "Ingen oppgaver" };
+}
+
+/* ---------- Ukeplan ---------- */
+
+/**
+ * Lager en plan for de neste 7 dagene.
+ * Hvert emne får en prioritet ut fra hvor mye som gjenstår (oppgaver og timemål),
+ * hvor nær eksamen er, og om det finnes oppgaver med høy prioritet eller snart frist.
+ * Hver dag velges de to emnene med høyest prioritet, og et emne som er valgt får
+ * lavere prioritet resten av uken, slik at planen veksler mellom emner.
+ * Oppgaver med frist kommer i tillegg på dagen de forfaller (forfalte oppgaver på I dag).
+ */
+function buildPlan() {
+  const today = startOfDay(new Date());
+  const active = courses.filter(c => daysLeft(c) >= 0);
+  const pickCount = {};
+  active.forEach(c => (pickCount[c.id] = 0));
+
+  const plan = [];
+  for (let i = 0; i < PLAN_DAYS; i++) {
+    const date = addDays(today, i);
+
+    const items = active
+      .filter(c => daysBetween(date, parseDate(c.date)) >= 0)
+      .map(c => {
+        const open = c.tasks.filter(t => !t.done);
+        let boost = 1;
+        if (open.some(t => t.priority === "high")) boost += 0.3;
+        if (open.some(t => t.due && daysBetween(date, parseDate(t.due)) <= 2)) boost += 0.4;
+        const left = Math.max(1, daysBetween(date, parseDate(c.date)));
+        const priority = ((0.3 + remainingShare(c)) * boost) / left / (1 + pickCount[c.id]);
+        return { course: c, priority, left: daysBetween(date, parseDate(c.date)) };
+      })
+      .sort((a, b) => b.priority - a.priority)
+      .slice(0, MAX_COURSES_PER_DAY);
+
+    items.forEach(x => pickCount[x.course.id]++);
+
+    const deadlines = [];
+    active.forEach(c => {
+      c.tasks.forEach(t => {
+        if (t.done || !t.due) return;
+        const diff = daysBetween(date, parseDate(t.due));
+        if (diff === 0 || (i === 0 && diff < 0)) deadlines.push({ course: c, task: t, overdue: diff < 0 });
+      });
+    });
+    deadlines.sort((a, b) =>
+      Number(b.overdue) - Number(a.overdue) ||
+      PRIORITIES[b.task.priority].rank - PRIORITIES[a.task.priority].rank
+    );
+
+    plan.push({ date, items, deadlines });
+  }
+  return plan;
+}
+
+/* ---------- Tegning (DOM) ---------- */
+
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  Object.entries(props).forEach(([k, v]) => {
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else node.setAttribute(k, v);
+  });
+  [].concat(children).forEach(c => c && node.appendChild(c));
+  return node;
+}
+
+function setText(id, text) {
+  document.getElementById(id).textContent = text;
+}
+
+function renderSummary() {
+  const box = document.getElementById("summary");
+  if (courses.length === 0) {
+    box.textContent = "Ingen emner enda. Legg til det første emnet ditt, eller prøv med demodata.";
+    return;
+  }
+  const upcoming = courses
+    .map(c => ({ c, left: daysLeft(c) }))
+    .filter(x => x.left >= 0)
+    .sort((a, b) => a.left - b.left);
+  const count = courses.length + (courses.length === 1 ? " emne." : " emner.");
+  let text = upcoming.length
+    ? count + " Neste eksamen er " + upcoming[0].c.name + " " + whenText(upcoming[0].left) + "."
+    : count + " Alle eksamener er over.";
+  const today = minutesOnDate(toISO(new Date()));
+  if (today > 0) text += " I dag har du studert " + formatMinutes(today) + ".";
+  if (pet) text += " " + pet.name + " er på nivå " + levelInfo(totalPoints()).level + ".";
+  box.textContent = text;
+}
+
+function renderSidebar() {
+  const list = document.getElementById("side-courses");
+  list.innerHTML = "";
+  if (courses.length === 0) {
+    list.appendChild(el("li", { class: "empty", text: "Ingen emner enda" }));
+    return;
+  }
+  [...courses]
+    .sort((a, b) => parseDate(a.date) - parseDate(b.date))
+    .forEach(course => {
+      const dot = el("span", { class: "dot" });
+      dot.style.setProperty("--c", course.color);
+      const link = el("a", { class: "side-item", href: "#course-" + course.id }, [dot, el("span", { text: course.name })]);
+      link.addEventListener("click", e => {
+        e.preventDefault();
+        openAndScroll(course.id);
+      });
+      list.appendChild(el("li", {}, [link]));
+    });
+}
+
+function openAndScroll(id) {
+  openIds.add(id);
+  goTo("courses");
+  render();
+  const target = document.getElementById("course-" + id);
+  if (target) target.scrollIntoView({ block: "start" });
+}
+
+/** Kortene for én dag i planen (brukes på ukeplanen og i «Dagens plan»). */
+function planChips(day) {
+  const chips = day.items.map(({ course, left }) => {
+    const next = nextTaskOf(course);
+    const lines = [
+      el("strong", { text: course.name }),
+      el("small", { text: next ? next.text : "Repetisjon og øvingsoppgaver" }),
+      el("small", { text: "Eksamen " + whenText(left) })
+    ];
+    const g = goalInfo(course);
+    if (g.goalMin > 0 && g.perDay > 0) {
+      lines.push(el("small", { text: "Anbefalt: ca. " + formatMinutes(g.perDay) }));
+    }
+    const chip = el("div", { class: "chip" }, lines);
+    chip.style.setProperty("--c", course.color);
+    return chip;
+  });
+
+  const deadlineChips = day.deadlines.map(({ course, task, overdue }) => {
+    const chip = el("div", { class: "chip deadline" + (overdue ? " overdue" : "") }, [
+      el("strong", { text: (overdue ? "Forfalt: " : "Frist: ") + task.text }),
+      el("small", { text: course.name })
+    ]);
+    chip.style.setProperty("--c", course.color);
+    return chip;
+  });
+
+  return chips.concat(deadlineChips);
+}
+
+function renderPlan() {
+  const box = document.getElementById("plan");
+  box.innerHTML = "";
+
+  if (courses.filter(c => daysLeft(c) >= 0).length === 0) {
+    box.appendChild(el("p", { class: "empty", text: "Legg til et emne med eksamensdato frem i tid for å få en plan." }));
+    return;
+  }
+
+  buildPlan().forEach((day, i) => {
+    const label = el("div", { class: "day-label" }, [
+      document.createTextNode(i === 0 ? "I dag" : formatWeekday(day.date)),
+      el("small", { text: formatDate(day.date) })
+    ]);
+
+    const content = planChips(day);
+    if (content.length === 0) content.push(el("span", { class: "empty", text: "Ingenting planlagt" }));
+    box.appendChild(el("div", { class: "day" + (i === 0 ? " today" : "") }, [
+      label,
+      el("div", { class: "day-items" }, content)
+    ]));
+  });
+}
+
+function renderCourses() {
+  const box = document.getElementById("courses");
+  box.innerHTML = "";
+
+  if (courses.length === 0) {
+    const empty = el("p", { class: "empty", text: "Ingen emner enda. Legg til ett nedenfor." });
+    empty.style.padding = "14px";
+    box.appendChild(empty);
+    return;
+  }
+
+  [...courses]
+    .sort((a, b) => parseDate(a.date) - parseDate(b.date))
+    .forEach(course => box.appendChild(renderCourse(course)));
+}
+
+function renderGoal(course) {
+  const info = goalInfo(course);
+
+  const grade = el("select", { "aria-label": "Ønsket karakter", "data-key": "grade-" + course.id }, [
+    el("option", { value: "", text: "Ikke valgt" })
+  ].concat(GRADES.map(g => el("option", { value: g, text: g }))));
+  grade.value = course.goalGrade;
+  grade.addEventListener("change", () => {
+    course.goalGrade = GRADES.includes(grade.value) ? grade.value : "";
+    save(); render();
+  });
+
+  const hours = el("input", {
+    type: "number", min: "0", max: "1000", step: "0.5", placeholder: "0",
+    "aria-label": "Timemål (timer)", "data-key": "hours-" + course.id
+  });
+  hours.value = course.goalHours > 0 ? course.goalHours : "";
+  hours.addEventListener("change", () => {
+    course.goalHours = clampNumber(hours.value, 0, 1000);
+    save(); render();
+  });
+
+  const lines = [];
+  if (info.goalMin > 0) {
+    lines.push("Brukt " + formatMinutes(info.done) + " av " + formatMinutes(info.goalMin) + ".");
+    if (info.left === 0) lines.push("Timemålet er nådd.");
+    else if (daysLeft(course) >= 0) lines.push(formatMinutes(info.left) + " igjen, ca. " + formatMinutes(info.perDay) + " per dag til eksamen.");
+    else lines.push(formatMinutes(info.left) + " igjen.");
+  } else {
+    lines.push(info.done > 0
+      ? "Brukt " + formatMinutes(info.done) + " så langt. Sett et timemål for å få en anbefaling per dag."
+      : "Sett et timemål for å få en anbefaling per dag.");
+  }
+  const openCount = course.tasks.filter(t => !t.done).length;
+  if (course.tasks.length > 0) lines.push(openCount + (openCount === 1 ? " oppgave" : " oppgaver") + " igjen.");
+
+  const bar = el("div", { class: "progress" }, [el("div")]);
+  bar.firstChild.style.width = info.pct + "%";
+  if (info.pct === 0) bar.firstChild.classList.add("zero");
+
+  return el("div", { class: "goal" }, [
+    el("div", { class: "goal-fields" }, [
+      el("label", { class: "field" }, [document.createTextNode("Ønsket karakter"), grade]),
+      el("label", { class: "field" }, [document.createTextNode("Timemål"), el("span", { class: "with-unit" }, [hours, document.createTextNode(" t")])])
+    ]),
+    info.goalMin > 0 ? bar : null,
+    el("p", { class: "goal-text", text: lines.join(" ") })
+  ]);
+}
+
+function renderTask(course, task) {
+  const cb = el("input", { type: "checkbox", "aria-label": "Ferdig: " + task.text, "data-key": "cb-" + task.id });
+  cb.checked = task.done;
+  cb.addEventListener("change", () => {
+    task.done = cb.checked;
+    const msg = task.done ? rewardTask(task) : "";
+    save();
+    render();
+    if (msg) toast(msg);
+  });
+
+  const prio = el("button", {
+    class: "badge prio-" + task.priority,
+    type: "button",
+    title: "Klikk for å bytte prioritet",
+    "aria-label": "Prioritet: " + PRIORITIES[task.priority].label + ". Klikk for å bytte.",
+    "data-key": "prio-" + task.id,
+    text: PRIORITIES[task.priority].label
+  });
+  prio.addEventListener("click", () => {
+    task.priority = PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(task.priority) + 1) % PRIORITY_ORDER.length];
+    save(); render();
+  });
+
+  const parts = [cb, el("span", { class: "task-text", text: task.text }), prio];
+  const due = dueInfo(task);
+  if (due) {
+    parts.push(el("span", { class: "badge due" + (due.overdue ? " overdue" : "") + (due.soon ? " soon" : ""), text: due.text }));
+  }
+
+  const del = el("button", { class: "danger", type: "button", "aria-label": "Slett oppgave", text: "✕" });
+  del.addEventListener("click", () => {
+    course.tasks = course.tasks.filter(t => t.id !== task.id);
+    save(); render();
+  });
+  parts.push(del);
+
+  return el("li", { class: task.done ? "done" : "" }, parts);
+}
+
+function renderCourse(course) {
+  const left = daysLeft(course);
+  const prog = rowProgress(course);
+
+  let big, small, cls = "countdown";
+  if (left < 0) { big = "—"; small = " ferdig"; cls += " past"; }
+  else if (left === 0) { big = "I dag"; small = ""; cls += " urgent"; }
+  else { big = String(left); small = left === 1 ? " dag igjen" : " dager igjen"; if (left <= 7) cls += " urgent"; }
+
+  const dot = el("span", { class: "dot" });
+  const nameParts = [el("span", { class: "chev", "aria-hidden": "true" }), dot, el("h3", { text: course.name })];
+  if (course.goalGrade) nameParts.push(el("span", { class: "badge goal", text: "Mål " + course.goalGrade }));
+  const nameCell = el("div", { class: "cell name" }, nameParts);
+
+  const dateCell = el("div", { class: "cell date", text: formatDate(parseDate(course.date)) });
+
+  const countdownCell = el("div", { class: "cell" }, [
+    el("div", { class: cls }, [el("strong", { text: big }), el("span", { text: small })])
+  ]);
+
+  const bar = el("div", { class: "progress" }, [el("div")]);
+  bar.firstChild.style.width = prog.pct + "%";
+  const progCell = el("div", { class: "cell prog" }, [bar, el("span", { class: "pct", text: prog.label })]);
+
+  const summary = el("summary", {}, [nameCell, dateCell, countdownCell, progCell]);
+
+  /* Innhold som vises når raden åpnes */
+  const list = el("ul", { class: "tasks" });
+  sortedTasks(course).forEach(task => list.appendChild(renderTask(course, task)));
+
+  const taskInput = el("input", {
+    type: "text", maxlength: "80", placeholder: "Ny oppgave, f.eks. «Gå gjennom forelesning 5»",
+    "aria-label": "Ny oppgave", "data-key": "task-" + course.id
+  });
+  const dueInput = el("input", { type: "date", "aria-label": "Frist (valgfri)", title: "Frist (valgfri)" });
+  const prioSelect = el("select", { "aria-label": "Prioritet" },
+    PRIORITY_ORDER.map(p => el("option", { value: p, text: PRIORITIES[p].label })));
+  prioSelect.value = "medium";
+  const taskForm = el("form", { class: "task-form" }, [
+    taskInput, dueInput, prioSelect,
+    el("button", { type: "submit", class: "btn", text: "Legg til" })
+  ]);
+  taskForm.addEventListener("submit", e => {
+    e.preventDefault();
+    const text = taskInput.value.trim();
+    if (!text) return;
+    course.tasks.push({
+      id: newId(),
+      text,
+      done: false,
+      due: isValidISO(dueInput.value) ? dueInput.value : "",
+      priority: isPriority(prioSelect.value) ? prioSelect.value : "medium"
+    });
+    openIds.add(course.id);
+    pendingFocus = "task-" + course.id;
+    save(); render();
+  });
+
+  const deleteBtn = el("button", { class: "danger", type: "button", text: "Slett emne" });
+  deleteBtn.addEventListener("click", () => {
+    if (confirm("Slette «" + course.name + "»? Oppgaver og loggført tid for emnet blir også slettet.")) {
+      courses = courses.filter(c => c.id !== course.id);
+      sessions = sessions.filter(s => s.courseId !== course.id);
+      openIds.delete(course.id);
+      if (timer.courseId === course.id) { resetTimer(); timer.courseId = ""; saveTimer(); }
+      save(); render();
+    }
+  });
+
+  const body = el("div", { class: "course-body" }, [
+    el("p", { class: "course-meta", text: "Eksamen " + formatLongDate(parseDate(course.date)) }),
+    renderGoal(course),
+    list,
+    taskForm,
+    el("div", { class: "actions" }, [deleteBtn])
+  ]);
+
+  const details = el("details", { class: "course", id: "course-" + course.id }, [summary, body]);
+  details.style.setProperty("--c", course.color);
+  details.open = openIds.has(course.id);
+  details.addEventListener("toggle", () => {
+    if (details.open) openIds.add(course.id);
+    else openIds.delete(course.id);
+  });
+  return details;
+}
+
+/* ---------- Studietid: timer ---------- */
+
+function defaultTimer() {
+  return { minutes: DEFAULT_TIMER_MIN, courseId: "", running: false, endAt: 0, remainingMs: DEFAULT_TIMER_MIN * 60000 };
+}
+
+function loadTimer() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TIMER_KEY));
+    if (t && typeof t === "object") {
+      const minutes = clampInt(t.minutes, 1, 180, DEFAULT_TIMER_MIN);
+      const endAt = Number.isFinite(t.endAt) ? t.endAt : 0;
+      const remaining = Number.isFinite(t.remainingMs) ? Math.min(Math.max(0, t.remainingMs), minutes * 60000) : minutes * 60000;
+      return {
+        minutes,
+        courseId: typeof t.courseId === "string" ? t.courseId : "",
+        running: t.running === true && endAt > 0,
+        endAt,
+        remainingMs: remaining
+      };
+    }
+  } catch (e) { /* bruk standard */ }
+  return defaultTimer();
+}
+
+function saveTimer() {
+  try {
+    localStorage.setItem(TIMER_KEY, JSON.stringify(timer));
+  } catch (e) { /* ignorer */ }
+}
+
+function timerRemaining() {
+  return timer.running ? Math.max(0, timer.endAt - Date.now()) : timer.remainingMs;
+}
+
+function setTimerStatus(msg) {
+  setText("timer-status", msg);
+}
+
+function startTicking() {
+  if (!tickHandle) tickHandle = setInterval(tick, 500);
+}
+
+function stopTicking() {
+  if (tickHandle) clearInterval(tickHandle);
+  tickHandle = null;
+}
+
+function resetTimer() {
+  timer.running = false;
+  timer.endAt = 0;
+  timer.remainingMs = timer.minutes * 60000;
+  stopTicking();
+  saveTimer();
+}
+
+function startOrPauseTimer() {
+  if (timer.running) {
+    timer.remainingMs = timerRemaining();
+    timer.running = false;
+    timer.endAt = 0;
+    stopTicking();
+    saveTimer();
+    setTimerStatus("Pauset.");
+    renderTimer();
+    return;
+  }
+  if (!courseById(timer.courseId)) {
+    setTimerStatus("Velg et emne først.");
+    return;
+  }
+  if (timer.remainingMs <= 0) timer.remainingMs = timer.minutes * 60000;
+  timer.endAt = Date.now() + timer.remainingMs;
+  timer.running = true;
+  saveTimer();
+  startTicking();
+  setTimerStatus("");
+  renderTimer();
+}
+
+/** Avslutter økten og logger tiden. auto = true når tiden har gått ut av seg selv. */
+function finishTimer(auto) {
+  const course = courseById(timer.courseId);
+  if (!course) {
+    resetTimer();
+    setTimerStatus("Velg et emne først.");
+    renderTimer();
+    return;
+  }
+  const elapsed = auto ? timer.minutes : Math.round((timer.minutes * 60000 - timerRemaining()) / 60000);
+  if (elapsed < 1) {
+    setTimerStatus("Mindre enn ett minutt er brukt, så ingenting ble logget.");
+    return;
+  }
+  resetTimer();
+  const bonus = logSession(course.id, elapsed, toISO(new Date()));
+  const msg = (auto ? "Økten er ferdig. " : "") + "Logget " + formatMinutes(elapsed) + " på " + course.name + "." + bonus;
+  setTimerStatus(msg);
+  if (auto) notifyTimerDone(msg);
+}
+
+function notifyTimerDone(msg) {
+  if (!notificationsSupported() || Notification.permission !== "granted") return;
+  try { new Notification("Fagblom", { body: msg }); } catch (e) { /* ignorer */ }
+}
+
+function tick() {
+  if (!timer.running) { stopTicking(); return; }
+  if (timerRemaining() <= 0) { finishTimer(true); return; }
+  renderTimerDisplay();
+}
+
+function setTimerMinutes(value) {
+  if (timer.running) return;
+  timer.minutes = clampInt(value, 1, 180, timer.minutes);
+  timer.remainingMs = timer.minutes * 60000;
+  saveTimer();
+  renderTimer();
+}
+
+function renderTimerDisplay() {
+  const ms = timerRemaining();
+  const display = document.getElementById("timer-display");
+  display.textContent = formatClock(ms);
+  display.classList.toggle("running", timer.running);
+  document.title = timer.running ? formatClock(ms) + " · Fagblom" : "Fagblom";
+}
+
+function renderTimer() {
+  const select = document.getElementById("timer-course");
+  const sorted = [...courses].sort((a, b) => parseDate(a.date) - parseDate(b.date));
+
+  if (!courseById(timer.courseId)) {
+    // Velg emnet med nærmeste kommende eksamen som standard
+    const next = sorted.find(c => daysLeft(c) >= 0) || sorted[0];
+    timer.courseId = next ? next.id : "";
+    saveTimer();
+  }
+
+  select.innerHTML = "";
+  if (sorted.length === 0) select.appendChild(el("option", { value: "", text: "Legg til et emne først" }));
+  sorted.forEach(c => select.appendChild(el("option", { value: c.id, text: c.name })));
+  select.value = timer.courseId;
+  select.disabled = timer.running || sorted.length === 0;
+
+  const idle = !timer.running && timer.remainingMs === timer.minutes * 60000;
+  const start = document.getElementById("timer-start");
+  start.textContent = timer.running ? "Pause" : idle ? "Start" : "Fortsett";
+  document.getElementById("timer-finish").disabled = idle;
+
+  document.querySelectorAll(".preset").forEach(btn => {
+    const active = Number(btn.dataset.min) === timer.minutes;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", String(active));
+    btn.disabled = timer.running;
+  });
+  const custom = document.getElementById("timer-custom");
+  custom.disabled = timer.running;
+  if (document.activeElement !== custom) custom.value = timer.minutes;
+
+  const manualDate = document.getElementById("manual-date");
+  manualDate.max = toISO(new Date());
+  if (!manualDate.value) manualDate.value = toISO(new Date());
+
+  renderTimerDisplay();
+}
+
+/* ---------- Studietid: logg og statistikk ---------- */
+
+/** Logger en økt og gir tilbake en kort tekst om poeng og eventuelt nytt nivå. */
+function logSession(courseId, minutes, dateISO) {
+  const before = levelInfo(totalPoints());
+  sessions.push({ id: newId(), courseId, date: dateISO, minutes });
+  const after = levelInfo(totalPoints());
+
+  const gained = after.points - before.points;
+  const levelUp = levelMessage(before, after);
+  const bonus = (gained > 0 ? " +" + gained + " poeng." : "") + levelUp;
+
+  save();
+  render();
+  if (levelUp) toast(levelUp.trim());
+  return bonus;
+}
+
+function renderStats() {
+  const today = startOfDay(new Date());
+  const days = [];
+  for (let i = 6; i >= 0; i--) days.push(addDays(today, -i));
+
+  const byDay = days.map(d => {
+    const iso = toISO(d);
+    const per = {};
+    let total = 0;
+    sessions.forEach(s => {
+      if (s.date === iso) { per[s.courseId] = (per[s.courseId] || 0) + s.minutes; total += s.minutes; }
+    });
+    return { date: d, per, total };
+  });
+
+  const weekTotal = byDay.reduce((sum, d) => sum + d.total, 0);
+  setText("stats-total", weekTotal > 0
+    ? "Totalt " + formatMinutes(weekTotal) + ", i snitt " + formatMinutes(weekTotal / 7) + " per dag."
+    : "Ingen studietid logget de siste 7 dagene. Start timeren eller logg tid manuelt.");
+
+  const max = Math.max(60, ...byDay.map(d => d.total));
+  const chart = document.getElementById("stats-chart");
+  chart.innerHTML = "";
+  byDay.forEach((d, i) => {
+    const stack = el("div", { class: "bar-stack" });
+    courses.forEach(c => {
+      if (!d.per[c.id]) return;
+      const seg = el("div", { class: "seg", title: c.name + ": " + formatMinutes(d.per[c.id]) });
+      seg.style.height = (d.per[c.id] / max) * 100 + "%";
+      seg.style.background = c.color;
+      stack.appendChild(seg);
+    });
+    const weekday = d.date.toLocaleDateString("nb-NO", { weekday: "short" }).replace(".", "");
+    chart.appendChild(el("div", {
+      class: "bar-col" + (i === 6 ? " today" : ""),
+      role: "group",
+      "aria-label": formatWeekday(d.date) + ": " + (d.total > 0 ? formatMinutes(d.total) : "ingen studietid")
+    }, [
+      stack,
+      el("span", { class: "bar-label", text: weekday }),
+      el("span", { class: "bar-value", text: d.total > 0 ? hoursText(d.total) + " t" : "–" })
+    ]));
+  });
+
+  const legend = document.getElementById("stats-legend");
+  legend.innerHTML = "";
+  const isoSet = new Set(days.map(toISO));
+  courses
+    .map(c => ({ c, min: sessions.reduce((sum, s) => (s.courseId === c.id && isoSet.has(s.date) ? sum + s.minutes : sum), 0) }))
+    .filter(x => x.min > 0)
+    .sort((a, b) => b.min - a.min)
+    .forEach(({ c, min }) => {
+      const dot = el("span", { class: "dot" });
+      dot.style.setProperty("--c", c.color);
+      legend.appendChild(el("li", {}, [dot, el("span", { class: "grow", text: c.name }), el("span", { class: "mins", text: formatMinutes(min) })]));
+    });
+
+  const list = document.getElementById("sessions-list");
+  list.innerHTML = "";
+  const recent = sessions
+    .map((s, idx) => ({ s, idx }))
+    .sort((a, b) => (a.s.date < b.s.date ? 1 : a.s.date > b.s.date ? -1 : b.idx - a.idx))
+    .slice(0, 6);
+  if (recent.length === 0) {
+    list.appendChild(el("li", { class: "empty", text: "Ingen økter enda." }));
+  }
+  recent.forEach(({ s }) => {
+    const c = courseById(s.courseId);
+    const dot = el("span", { class: "dot" });
+    dot.style.setProperty("--c", c ? c.color : DEFAULT_COLOR);
+    const del = el("button", { class: "danger", type: "button", "aria-label": "Slett økt", text: "✕" });
+    del.addEventListener("click", () => {
+      sessions = sessions.filter(x => x.id !== s.id);
+      save(); render();
+    });
+    list.appendChild(el("li", {}, [
+      el("span", { class: "when", text: formatDate(parseDate(s.date)) }),
+      dot,
+      el("span", { class: "grow", text: c ? c.name : "Slettet emne" }),
+      el("span", { class: "mins", text: formatMinutes(s.minutes) }),
+      del
+    ]));
+  });
+}
+
+/* ---------- Studiedyr ---------- */
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const OUTLINE = "rgba(50, 35, 35, 0.38)";
+const GROUND = 102;
+
+/* Størrelser for hvert livsstadium: babyen er liten med stort hode og store øyne */
+const GEO = {
+  baby:  { bodyRx: 19, bodyRy: 15, headR: 31, scale: 0.84, eye: 6.4, eyeDy: 0.14 },
+  young: { bodyRx: 25, bodyRy: 21, headR: 27, scale: 0.92, eye: 5.2, eyeDy: 0.08 },
+  adult: { bodyRx: 31, bodyRy: 26, headR: 24, scale: 1,    eye: 4.2, eyeDy: 0.02 },
+  elder: { bodyRx: 32, bodyRy: 26, headR: 24, scale: 0.98, eye: 3.8, eyeDy: 0.04 }
+};
+
+function S(tag, attrs, kids) {
+  const n = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => n.setAttribute(k, String(v)));
+  [].concat(kids || []).forEach(c => c && n.appendChild(c));
+  return n;
+}
+
+function shape(tag, attrs, fill) {
+  return S(tag, Object.assign({ fill, stroke: OUTLINE, "stroke-width": 1.2, "stroke-linejoin": "round" }, attrs));
+}
+
+function thickPath(d, color, width) {
+  const common = { d, fill: "none", "stroke-linecap": "round" };
+  return S("g", {}, [
+    S("path", Object.assign({ stroke: OUTLINE, "stroke-width": width + 2.4 }, common)),
+    S("path", Object.assign({ stroke: color, "stroke-width": width }, common))
+  ]);
+}
+
+function sidesOf(fn) {
+  return [-1, 1].map(fn);
+}
+
+/* Øyne, kinn og (for gamle dyr) øyenbryn */
+function drawEyes(G, iris) {
+  const nodes = [];
+  sidesOf(s => {
+    const x = G.cx + s * G.eyeDx;
+    if (iris) {
+      nodes.push(S("circle", { cx: x, cy: G.eyeY, r: G.eye, fill: iris, stroke: OUTLINE, "stroke-width": 1 }));
+      nodes.push(S("ellipse", { cx: x, cy: G.eyeY, rx: G.eye * 0.34, ry: G.eye * 0.86, fill: "#1f1a1c" }));
+    } else {
+      nodes.push(S("circle", { cx: x, cy: G.eyeY, r: G.eye, fill: "#2b2326" }));
+    }
+    nodes.push(S("circle", { cx: x - G.eye * 0.3, cy: G.eyeY - G.eye * 0.32, r: G.eye * 0.32, fill: "#fff" }));
+    if (G.baby) {
+      nodes.push(S("circle", { cx: G.cx + s * G.hr * 0.66, cy: G.eyeY + G.hr * 0.3, r: G.hr * 0.16, fill: "#f08a9a", opacity: 0.4 }));
+    }
+    if (G.elder) {
+      nodes.push(S("path", {
+        d: "M " + (x - G.eye * 1.3) + " " + (G.eyeY - G.eye * 1.9) + " L " + (x + G.eye * 1.3) + " " + (G.eyeY - G.eye * 1.5),
+        stroke: "#8d8d8d", "stroke-width": 2.2, "stroke-linecap": "round", fill: "none",
+        transform: s === 1 ? "" : "translate(" + (2 * x) + " 0) scale(-1 1)"
+      }));
+    }
+  });
+  return nodes;
+}
+
+/* Små detaljer som mange dyr har felles */
+function drawMouth(G, y) {
+  const a = G.hr * 0.12, b = G.hr * 0.12;
+  return sidesOf(s => S("path", {
+    d: "M " + G.cx + " " + y + " q " + (s * a) + " " + b + " " + (s * a * 2) + " " + (b * 0.1),
+    stroke: "#5a3f43", "stroke-width": 1.4, fill: "none", "stroke-linecap": "round"
+  }));
+}
+
+function drawWhiskers(G, y) {
+  const out = [];
+  sidesOf(s => [-0.06, 0.1].forEach(dy => out.push(S("path", {
+    d: "M " + (G.cx + s * G.hr * 0.5) + " " + (y + G.hr * dy) + " L " + (G.cx + s * G.hr * 1.2) + " " + (y + G.hr * (dy * 2.2 - 0.04)),
+    stroke: "rgba(70,55,55,0.5)", "stroke-width": 1, "stroke-linecap": "round", fill: "none"
+  }))));
+  return out;
+}
+
+function elderMuzzle(G) {
+  return G.elder ? [S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.42, rx: G.hr * 0.62, ry: G.hr * 0.42, fill: "#eeeeee", opacity: 0.45 })] : [];
+}
+
+function bodyParts(G, fur, belly, feet) {
+  const n = [];
+  n.push(shape("ellipse", { cx: G.cx, cy: G.bodyCy, rx: G.bRx, ry: G.bRy }, fur));
+  if (belly) n.push(S("ellipse", { cx: G.cx, cy: G.bodyCy + G.bRy * 0.18, rx: G.bRx * 0.6, ry: G.bRy * 0.68, fill: belly }));
+  sidesOf(s => n.push(shape("ellipse", { cx: G.cx + s * G.bRx * 0.48, cy: GROUND - 3, rx: G.bRx * 0.3, ry: 5 }, feet || fur)));
+  return n;
+}
+
+/* ---- Hver dyretype ---- */
+
+function drawCat(a, G) {
+  const n = [];
+  n.push(thickPath("M " + (G.cx + G.bRx * 0.8) + " " + (G.bodyCy + G.bRy * 0.3) + " q " + (G.bRx * 0.7) + " 0 " + (G.bRx * 0.5) + " " + (-G.bRy * 1.3), a.fur, G.baby ? 5 : 7));
+  n.push(...bodyParts(G, a.fur, a.light));
+  if (a.stripes) {
+    sidesOf(s => n.push(S("path", { d: "M " + (G.cx + s * G.bRx * 0.95) + " " + (G.bodyCy - 2) + " q " + (-s * 7) + " 3 " + (-s * 9) + " 10", stroke: a.dark, "stroke-width": 2.4, fill: "none", "stroke-linecap": "round" })));
+  }
+  sidesOf(s => {
+    n.push(shape("polygon", { points: [G.cx + s * G.hr * 0.98, G.hy - G.hr * 0.05, G.cx + s * G.hr * 0.78, G.hy - G.hr * 1.32, G.cx + s * G.hr * 0.1, G.hy - G.hr * 0.88].join(" ") }, a.fur));
+    n.push(S("polygon", { points: [G.cx + s * G.hr * 0.82, G.hy - G.hr * 0.2, G.cx + s * G.hr * 0.72, G.hy - G.hr * 1.0, G.cx + s * G.hr * 0.3, G.hy - G.hr * 0.78].join(" "), fill: a.inner }));
+  });
+  n.push(shape("ellipse", { cx: G.cx, cy: G.hy, rx: G.hr * 1.06, ry: G.hr * 0.96 }, a.fur));
+  if (a.stripes) {
+    [-1, 0, 1].forEach(k => n.push(S("path", { d: "M " + (G.cx + k * G.hr * 0.26) + " " + (G.hy - G.hr * 0.95) + " l " + (k * 0.8) + " " + (G.hr * 0.3), stroke: a.dark, "stroke-width": 2.4, "stroke-linecap": "round", fill: "none" })));
+  }
+  n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.4, rx: G.hr * 0.42, ry: G.hr * 0.3, fill: a.light }));
+  n.push(...elderMuzzle(G));
+  n.push(...drawWhiskers(G, G.hy + G.hr * 0.34));
+  n.push(...drawEyes(G, a.iris));
+  n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.26, rx: G.hr * 0.11, ry: G.hr * 0.075, fill: a.nose }));
+  n.push(...drawMouth(G, G.hy + G.hr * 0.34));
+  return n;
+}
+
+function drawDog(a, G) {
+  const n = [];
+  n.push(thickPath("M " + (G.cx + G.bRx * 0.85) + " " + (G.bodyCy + G.bRy * 0.1) + " q " + (G.bRx * 0.4) + " " + (-G.bRy * 0.1) + " " + (G.bRx * 0.3) + " " + (-G.bRy * 0.8), a.fur, G.baby ? 5 : 6));
+  n.push(...bodyParts(G, a.fur, a.light));
+  if (a.patch) {
+    n.push(S("ellipse", { cx: G.cx + G.bRx * 0.35, cy: G.bodyCy - G.bRy * 0.15, rx: G.bRx * 0.28, ry: G.bRy * 0.3, fill: a.dark, opacity: 0.9 }));
+    n.push(S("ellipse", { cx: G.cx - G.bRx * 0.5, cy: G.bodyCy + G.bRy * 0.3, rx: G.bRx * 0.2, ry: G.bRy * 0.22, fill: a.dark, opacity: 0.9 }));
+  }
+  n.push(shape("ellipse", { cx: G.cx, cy: G.hy, rx: G.hr * 1.04, ry: G.hr * 0.97 }, a.fur));
+  if (a.patch) n.push(S("ellipse", { cx: G.cx - G.hr * 0.46, cy: G.hy - G.hr * 0.28, rx: G.hr * 0.4, ry: G.hr * 0.46, fill: a.dark, opacity: 0.9 }));
+  sidesOf(s => n.push(shape("ellipse", {
+    cx: G.cx + s * G.hr * 1.0, cy: G.hy + G.hr * 0.12, rx: G.hr * 0.32, ry: G.hr * 0.62,
+    transform: "rotate(" + (s * 12) + " " + (G.cx + s * G.hr) + " " + (G.hy - G.hr * 0.3) + ")"
+  }, s === 1 && a.patch ? "#6e4a2e" : a.ear)));
+  n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.42, rx: G.hr * 0.52, ry: G.hr * 0.4, fill: a.light }));
+  n.push(...elderMuzzle(G));
+  n.push(...drawEyes(G, null));
+  if (!G.elder) n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.78, rx: G.hr * 0.14, ry: G.hr * 0.17, fill: "#e87d8f" }));
+  n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.26, rx: G.hr * 0.18, ry: G.hr * 0.12, fill: a.nose }));
+  n.push(...drawMouth(G, G.hy + G.hr * 0.4));
+  return n;
+}
+
+function drawFox(a, G) {
+  const n = [];
+  const tx = G.cx + G.bRx * 1.0, ty = G.bodyCy;
+  n.push(shape("ellipse", { cx: tx, cy: ty, rx: G.bRx * 0.62, ry: G.bRy * 0.4, transform: "rotate(-35 " + tx + " " + ty + ")" }, a.fur));
+  n.push(S("circle", { cx: tx + G.bRx * 0.4, cy: ty - G.bRy * 0.5, r: G.bRy * 0.25, fill: "#fff6ea" }));
+  n.push(...bodyParts(G, a.fur, a.light, "#4a342c"));
+  sidesOf(s => {
+    n.push(shape("polygon", { points: [G.cx + s * G.hr * 1.0, G.hy - G.hr * 0.05, G.cx + s * G.hr * 0.72, G.hy - G.hr * 1.4, G.cx + s * G.hr * 0.08, G.hy - G.hr * 0.85].join(" ") }, a.fur));
+    n.push(S("polygon", { points: [G.cx + s * G.hr * 0.84, G.hy - G.hr * 0.2, G.cx + s * G.hr * 0.7, G.hy - G.hr * 1.08, G.cx + s * G.hr * 0.3, G.hy - G.hr * 0.78].join(" "), fill: "#4a342c" }));
+  });
+  n.push(shape("ellipse", { cx: G.cx, cy: G.hy, rx: G.hr * 1.08, ry: G.hr * 0.94 }, a.fur));
+  const hy = G.hy, hr = G.hr, cx = G.cx;
+  n.push(S("path", {
+    d: "M " + (cx - hr * 1.04) + " " + (hy + hr * 0.02) + " Q " + (cx - hr * 0.5) + " " + (hy + hr * 0.7) + " " + cx + " " + (hy + hr * 0.96) +
+      " Q " + (cx + hr * 0.5) + " " + (hy + hr * 0.7) + " " + (cx + hr * 1.04) + " " + (hy + hr * 0.02) +
+      " Q " + cx + " " + (hy + hr * 0.38) + " " + (cx - hr * 1.04) + " " + (hy + hr * 0.02) + " Z",
+    fill: "#fff6ea"
+  }));
+  n.push(...elderMuzzle(G));
+  n.push(...drawEyes(G, null));
+  n.push(S("ellipse", { cx, cy: hy + hr * 0.5, rx: hr * 0.13, ry: hr * 0.09, fill: "#2b2326" }));
+  n.push(...drawMouth(G, hy + hr * 0.58));
+  return n;
+}
+
+function drawPenguin(a, G) {
+  const n = [];
+  const tone = G.baby ? "#a2a9b8" : (G.young ? "#667086" : "#2f3a4d");
+  n.push(shape("ellipse", { cx: G.cx, cy: G.bodyCy, rx: G.bRx, ry: G.bRy * 1.02 }, tone));
+  n.push(S("ellipse", { cx: G.cx, cy: G.bodyCy + G.bRy * 0.15, rx: G.bRx * 0.68, ry: G.bRy * 0.8, fill: "#fbfaf6" }));
+  sidesOf(s => n.push(shape("ellipse", { cx: G.cx + s * G.bRx * 0.98, cy: G.bodyCy, rx: G.bRx * 0.2, ry: G.bRy * 0.72, transform: "rotate(" + (s * -18) + " " + (G.cx + s * G.bRx) + " " + G.bodyCy + ")" }, tone)));
+  sidesOf(s => n.push(shape("ellipse", { cx: G.cx + s * G.bRx * 0.4, cy: GROUND - 1.5, rx: G.bRx * 0.32, ry: 4 }, "#f2a93b")));
+  n.push(shape("circle", { cx: G.cx, cy: G.hy, r: G.hr }, tone));
+  sidesOf(s => n.push(S("ellipse", { cx: G.cx + s * G.hr * 0.36, cy: G.hy + G.hr * 0.12, rx: G.hr * 0.46, ry: G.hr * 0.56, fill: "#fbfaf6" })));
+  n.push(...drawEyes(G, null));
+  const by = G.hy + G.hr * 0.36;
+  n.push(shape("polygon", { points: [G.cx - G.hr * 0.22, by, G.cx + G.hr * 0.22, by, G.cx, by + G.hr * 0.32].join(" ") }, "#f2a93b"));
+  return n;
+}
+
+function drawPanda(a, G) {
+  const n = [];
+  n.push(...bodyParts(G, "#fbfbf7", null, "#2e2a2c"));
+  sidesOf(s => n.push(shape("ellipse", { cx: G.cx + s * G.bRx * 0.86, cy: G.bodyCy, rx: G.bRx * 0.22, ry: G.bRy * 0.72, transform: "rotate(" + (s * -12) + " " + (G.cx + s * G.bRx) + " " + G.bodyCy + ")" }, "#2e2a2c")));
+  sidesOf(s => n.push(shape("circle", { cx: G.cx + s * G.hr * 0.8, cy: G.hy - G.hr * 0.78, r: G.hr * 0.32 }, "#2e2a2c")));
+  n.push(shape("ellipse", { cx: G.cx, cy: G.hy, rx: G.hr * 1.06, ry: G.hr * 0.96 }, "#fbfbf7"));
+  sidesOf(s => n.push(S("ellipse", { cx: G.cx + s * G.eyeDx, cy: G.eyeY, rx: G.hr * 0.24, ry: G.hr * 0.32, fill: "#2e2a2c", transform: "rotate(" + (s * 22) + " " + (G.cx + s * G.eyeDx) + " " + G.eyeY + ")" })));
+  const eyes = drawEyes(G, null);
+  eyes.forEach(e => { if (e.getAttribute("fill") === "#2b2326") e.setAttribute("fill", "#fff"); });
+  n.push(...eyes);
+  // pupiller oppå de hvite øynene
+  sidesOf(s => n.push(S("circle", { cx: G.cx + s * G.eyeDx, cy: G.eyeY, r: G.eye * 0.55, fill: "#0f0c0d" })));
+  sidesOf(s => n.push(S("circle", { cx: G.cx + s * G.eyeDx - G.eye * 0.2, cy: G.eyeY - G.eye * 0.2, r: G.eye * 0.2, fill: "#fff" })));
+  n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.34, rx: G.hr * 0.16, ry: G.hr * 0.11, fill: "#2e2a2c" }));
+  n.push(...drawMouth(G, G.hy + G.hr * 0.44));
+  return n;
+}
+
+function drawRabbit(a, G) {
+  const n = [];
+  n.push(S("circle", { cx: G.cx + G.bRx * 0.85, cy: G.bodyCy + G.bRy * 0.3, r: G.bRy * 0.36, fill: "#ffffff", stroke: OUTLINE, "stroke-width": 1.2 }));
+  n.push(...bodyParts(G, a.fur, a.light));
+  const earLen = G.baby ? 0.62 : 0.9;
+  sidesOf(s => {
+    const ex = G.cx + s * G.hr * 0.42, ey = G.hy - G.hr * (0.72 + earLen * 0.55);
+    // gamle kaniner har ett hengende øre
+    const rot = G.elder && s === 1 ? 58 : s * 8;
+    const pivot = ex + " " + (G.hy - G.hr * 0.7);
+    n.push(shape("ellipse", { cx: ex, cy: ey, rx: G.hr * 0.23, ry: G.hr * earLen, transform: "rotate(" + rot + " " + pivot + ")" }, a.fur));
+    n.push(S("ellipse", { cx: ex, cy: ey, rx: G.hr * 0.12, ry: G.hr * earLen * 0.78, fill: a.inner, transform: "rotate(" + rot + " " + pivot + ")" }));
+  });
+  n.push(shape("ellipse", { cx: G.cx, cy: G.hy, rx: G.hr * 1.04, ry: G.hr * 0.95 }, a.fur));
+  n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.42, rx: G.hr * 0.44, ry: G.hr * 0.32, fill: a.light }));
+  n.push(...elderMuzzle(G));
+  n.push(...drawEyes(G, null));
+  n.push(S("ellipse", { cx: G.cx, cy: G.hy + G.hr * 0.27, rx: G.hr * 0.1, ry: G.hr * 0.07, fill: "#e87d8f" }));
+  n.push(...drawMouth(G, G.hy + G.hr * 0.34));
+  n.push(S("rect", { x: G.cx - G.hr * 0.11, y: G.hy + G.hr * 0.46, width: G.hr * 0.22, height: G.hr * 0.2, rx: 1.5, fill: "#fff", stroke: OUTLINE, "stroke-width": 0.8 }));
+  return n;
+}
+
+const DRAWERS = { cat: drawCat, dog: drawDog, fox: drawFox, penguin: drawPenguin, panda: drawPanda, rabbit: drawRabbit };
+
+/* ---- Tilbehør og bakgrunner ---- */
+
+function drawAccessory(id, G) {
+  const top = G.hy - G.hr * 0.96;
+  const neckY = G.hy + G.hr * 0.9;
+  const hr = G.hr, cx = G.cx;
+  switch (id) {
+    case "bow": {
+      const x = cx + hr * 0.62, y = G.hy - hr * 0.86, w = hr * 0.3;
+      return S("g", {}, [
+        shape("polygon", { points: [x, y, x - w * 1.2, y - w * 0.75, x - w * 1.2, y + w * 0.75].join(" ") }, "#e86a8a"),
+        shape("polygon", { points: [x, y, x + w * 1.2, y - w * 0.75, x + w * 1.2, y + w * 0.75].join(" ") }, "#e86a8a"),
+        shape("circle", { cx: x, cy: y, r: w * 0.4 }, "#d1496d")
+      ]);
+    }
+    case "party":
+      return S("g", { transform: "rotate(12 " + cx + " " + top + ")" }, [
+        shape("polygon", { points: [cx - hr * 0.5, top + hr * 0.2, cx + hr * 0.5, top + hr * 0.2, cx, top - hr * 1.0].join(" ") }, "#6fa8dc"),
+        S("circle", { cx: cx - hr * 0.12, cy: top - hr * 0.1, r: hr * 0.06, fill: "#fff" }),
+        S("circle", { cx: cx + hr * 0.14, cy: top + hr * 0.02, r: hr * 0.06, fill: "#f6d55c" }),
+        S("circle", { cx: cx - hr * 0.02, cy: top - hr * 0.45, r: hr * 0.05, fill: "#f08a9a" }),
+        shape("circle", { cx, cy: top - hr * 1.0, r: hr * 0.14 }, "#f6d55c")
+      ]);
+    case "cap":
+      return S("g", {}, [
+        shape("path", { d: "M " + (cx - hr * 0.55) + " " + (top + hr * 0.12) + " L " + (cx - hr * 0.55) + " " + (top + hr * 0.52) + " Q " + cx + " " + (top + hr * 0.78) + " " + (cx + hr * 0.55) + " " + (top + hr * 0.52) + " L " + (cx + hr * 0.55) + " " + (top + hr * 0.12) + " Z" }, "#3a3944"),
+        shape("polygon", { points: [cx - hr * 1.0, top + hr * 0.12, cx, top - hr * 0.34, cx + hr * 1.0, top + hr * 0.12, cx, top + hr * 0.56].join(" ") }, "#2b2a33"),
+        S("path", { d: "M " + cx + " " + (top + hr * 0.1) + " L " + (cx + hr * 0.78) + " " + (top + hr * 0.1) + " L " + (cx + hr * 0.78) + " " + (top + hr * 0.62), stroke: "#e9c46a", "stroke-width": 1.6, fill: "none", "stroke-linecap": "round" }),
+        S("circle", { cx: cx + hr * 0.78, cy: top + hr * 0.66, r: hr * 0.09, fill: "#e9c46a" })
+      ]);
+    case "crown":
+      return S("g", {}, [
+        shape("path", {
+          d: "M " + (cx - hr * 0.55) + " " + (top + hr * 0.25) + " L " + (cx - hr * 0.55) + " " + (top - hr * 0.35) +
+            " L " + (cx - hr * 0.28) + " " + (top - hr * 0.05) + " L " + cx + " " + (top - hr * 0.55) +
+            " L " + (cx + hr * 0.28) + " " + (top - hr * 0.05) + " L " + (cx + hr * 0.55) + " " + (top - hr * 0.35) +
+            " L " + (cx + hr * 0.55) + " " + (top + hr * 0.25) + " Z"
+        }, "#f2c14e"),
+        S("circle", { cx, cy: top + hr * 0.05, r: hr * 0.08, fill: "#d1496d" }),
+        S("circle", { cx: cx - hr * 0.32, cy: top + hr * 0.1, r: hr * 0.06, fill: "#4a8fd1" }),
+        S("circle", { cx: cx + hr * 0.32, cy: top + hr * 0.1, r: hr * 0.06, fill: "#4a8fd1" })
+      ]);
+    case "glasses": {
+      const r = Math.max(G.eye * 1.9, hr * 0.27);
+      return S("g", { fill: "none", stroke: "#3b3336", "stroke-width": 1.8 }, [
+        S("circle", { cx: cx - G.eyeDx, cy: G.eyeY, r, fill: "rgba(255,255,255,0.28)" }),
+        S("circle", { cx: cx + G.eyeDx, cy: G.eyeY, r, fill: "rgba(255,255,255,0.28)" }),
+        S("path", { d: "M " + (cx - G.eyeDx + r) + " " + G.eyeY + " L " + (cx + G.eyeDx - r) + " " + G.eyeY })
+      ]);
+    }
+    case "shades": {
+      const r = Math.max(G.eye * 1.9, hr * 0.27);
+      return S("g", {}, [
+        S("rect", { x: cx - G.eyeDx - r, y: G.eyeY - r * 0.75, width: r * 2, height: r * 1.5, rx: r * 0.5, fill: "#26242b" }),
+        S("rect", { x: cx + G.eyeDx - r, y: G.eyeY - r * 0.75, width: r * 2, height: r * 1.5, rx: r * 0.5, fill: "#26242b" }),
+        S("path", { d: "M " + (cx - G.eyeDx + r) + " " + G.eyeY + " L " + (cx + G.eyeDx - r) + " " + G.eyeY, stroke: "#26242b", "stroke-width": 2 }),
+        S("path", { d: "M " + (cx - G.eyeDx - r * 0.5) + " " + (G.eyeY - r * 0.35) + " l " + (r * 0.5) + " " + (-r * 0.1), stroke: "rgba(255,255,255,0.45)", "stroke-width": 1.4, "stroke-linecap": "round" })
+      ]);
+    }
+    case "scarf":
+      return S("g", {}, [
+        shape("rect", { x: cx - hr * 0.88, y: neckY - hr * 0.14, width: hr * 1.76, height: hr * 0.36, rx: hr * 0.18 }, "#d9534f"),
+        shape("rect", { x: cx + hr * 0.28, y: neckY + hr * 0.06, width: hr * 0.32, height: hr * 0.66, rx: 3 }, "#c4443f"),
+        S("path", { d: "M " + (cx - hr * 0.4) + " " + (neckY - hr * 0.1) + " v " + (hr * 0.28) + " M " + (cx + hr * 0.05) + " " + (neckY - hr * 0.1) + " v " + (hr * 0.28), stroke: "rgba(255,255,255,0.45)", "stroke-width": 2 })
+      ]);
+    case "bowtie": {
+      const y = neckY + hr * 0.12, w = hr * 0.4;
+      return S("g", {}, [
+        shape("polygon", { points: [cx, y, cx - w, y - w * 0.62, cx - w, y + w * 0.62].join(" ") }, "#7a5ea8"),
+        shape("polygon", { points: [cx, y, cx + w, y - w * 0.62, cx + w, y + w * 0.62].join(" ") }, "#7a5ea8"),
+        shape("circle", { cx, cy: y, r: w * 0.28 }, "#5f4789")
+      ]);
+    }
+    default:
+      return null;
+  }
+}
+
+function drawBackground(id) {
+  switch (id) {
+    case "meadow":
+      return [
+        S("rect", { x: 0, y: 0, width: 120, height: 120, fill: "#cfe8f5" }),
+        S("circle", { cx: 98, cy: 22, r: 10, fill: "#fbe58a" }),
+        S("ellipse", { cx: 60, cy: 120, rx: 86, ry: 28, fill: "#9fcf86" }),
+        S("circle", { cx: 18, cy: 98, r: 4, fill: "#f7c6d0" }), S("circle", { cx: 18, cy: 98, r: 1.6, fill: "#f2c14e" }),
+        S("circle", { cx: 100, cy: 96, r: 4, fill: "#f7c6d0" }), S("circle", { cx: 100, cy: 96, r: 1.6, fill: "#f2c14e" })
+      ];
+    case "night":
+      return [
+        S("rect", { x: 0, y: 0, width: 120, height: 120, fill: "#27305a" }),
+        S("circle", { cx: 92, cy: 26, r: 10, fill: "#f6efc7" }),
+        S("circle", { cx: 96, cy: 23, r: 9, fill: "#27305a" }),
+        S("circle", { cx: 20, cy: 24, r: 1.6, fill: "#fff" }), S("circle", { cx: 40, cy: 14, r: 1.2, fill: "#fff" }),
+        S("circle", { cx: 66, cy: 28, r: 1.4, fill: "#fff" }), S("circle", { cx: 26, cy: 52, r: 1.2, fill: "#fff" }),
+        S("circle", { cx: 104, cy: 56, r: 1.4, fill: "#fff" }),
+        S("ellipse", { cx: 60, cy: 120, rx: 86, ry: 26, fill: "#3a4a78" })
+      ];
+    case "sunset":
+      return [
+        S("rect", { x: 0, y: 0, width: 120, height: 120, fill: "#f2a07b" }),
+        S("rect", { x: 0, y: 46, width: 120, height: 40, fill: "#f7bf8a" }),
+        S("circle", { cx: 60, cy: 80, r: 20, fill: "#fde6a0" }),
+        S("ellipse", { cx: 60, cy: 120, rx: 86, ry: 28, fill: "#b56b5c" })
+      ];
+    default:
+      return [];
+  }
+}
+
+/** Tegner dyret som en SVG. `stageKey` er baby/young/adult/elder, `equipped` hva dyret har på seg. */
+function drawPet(animal, stageKey, equipped) {
+  const g = GEO[stageKey] || GEO.adult;
+  const G = {
+    cx: 60, hr: g.headR, bRx: g.bodyRx, bRy: g.bodyRy, eye: g.eye,
+    baby: stageKey === "baby", young: stageKey === "young", elder: stageKey === "elder"
+  };
+  G.bodyCy = GROUND - G.bRy;
+  G.bodyTop = G.bodyCy - G.bRy;
+  G.hy = G.bodyTop - G.hr * 0.4;
+  G.eyeY = G.hy + G.hr * g.eyeDy;
+  G.eyeDx = G.hr * 0.4;
+
+  const eq = equipped || {};
+  const art = [
+    S("ellipse", { cx: 60, cy: GROUND + 1, rx: G.bRx * 1.05, ry: 3.5, fill: "rgba(0,0,0,0.14)" }),
+    ...(DRAWERS[animal.kind] || drawCat)(animal, G)
+  ];
+  ["neck", "face", "head"].forEach(slot => {
+    const piece = eq[slot] ? drawAccessory(eq[slot], G) : null;
+    if (piece) art.push(piece);
+  });
+
+  return S("svg", { viewBox: "0 0 120 120", "aria-hidden": "true", focusable: "false" }, [
+    ...drawBackground(eq.bg),
+    S("g", { transform: "translate(60 " + GROUND + ") scale(" + g.scale + ") translate(-60 " + (-GROUND) + ")" }, art)
+  ]);
+}
+
+/* ---- Valg av dyr, poeng og butikk ---- */
+
+function stageOf(level) {
+  let s = STAGES[0];
+  STAGES.forEach(x => { if (level >= x.from) s = x; });
+  return s;
+}
+
+function stageName(level) {
+  return stageOf(level).name;
+}
+
+function itemById(id) {
+  return SHOP.find(i => i.id === id) || null;
+}
+
+function pointBalance() {
+  return Math.max(0, totalPoints() - wallet.spent);
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 5000);
+}
+
+/** Tekst når dyret går opp et nivå eller blir eldre. Tom hvis ingenting skjedde. */
+function levelMessage(before, after) {
+  if (!pet || after.level <= before.level) return "";
+  petBounce = true;
+  let msg = " Nivå opp! " + pet.name + " er nå nivå " + after.level + ".";
+  const was = stageOf(before.level), now = stageOf(after.level);
+  if (was.key !== now.key) msg += " " + pet.name + " er nå " + now.adj + "!";
+  return msg;
+}
+
+/** Gir poeng første gang en oppgave krysses av. Å huke av og på igjen gir ikke nye poeng. */
+function rewardTask(task) {
+  if (task.rewarded) return "";
+  task.rewarded = true;
+  const pts = TASK_POINTS[isPriority(task.priority) ? task.priority : "medium"];
+  const before = levelInfo(totalPoints());
+  wallet.bonus += pts;
+  return "+" + pts + " poeng for oppgaven!" + levelMessage(before, levelInfo(totalPoints()));
+}
+
+function buyItem(id) {
+  const item = itemById(id);
+  if (!item || wallet.owned.includes(id)) return;
+  const missing = item.price - pointBalance();
+  if (missing > 0) { toast("Du trenger " + missing + " poeng til for å kjøpe " + item.name.toLowerCase() + "."); return; }
+  wallet.spent += item.price;
+  wallet.owned.push(id);
+  wallet.equipped[item.slot] = id;
+  pendingFocus = "shop-" + id;
+  save();
+  render();
+  toast("Kjøpt: " + item.name + "!");
+}
+
+function toggleItem(id) {
+  const item = itemById(id);
+  if (!item || !wallet.owned.includes(id)) return;
+  wallet.equipped[item.slot] = wallet.equipped[item.slot] === id ? "" : id;
+  pendingFocus = "shop-" + id;
+  save();
+  render();
+}
+
+function petArt(animal, stageKey, equipped, cls, label) {
+  const attrs = { class: cls };
+  if (label) { attrs.role = "img"; attrs["aria-label"] = label; } else { attrs["aria-hidden"] = "true"; }
+  return el("div", attrs, [drawPet(animal, stageKey, equipped)]);
+}
+
+/** Skjema for å velge dyr og navn. Brukes både første gang og når du vil endre. */
+function buildPetChooser(animalId, name, submitText, onSubmit) {
+  let selected = animalId;
+  const nameInput = el("input", { type: "text", maxlength: "20", placeholder: "Navn på dyret", "aria-label": "Navn på dyret" });
+  nameInput.value = name || "";
+  const message = el("p", { class: "status", role: "status" });
+
+  const buttons = ANIMALS.map(a => {
+    const b = el("button", { type: "button", class: "animal", "aria-pressed": String(a.id === selected), title: a.label }, [
+      petArt(a, "young", {}, "animal-art"),
+      el("span", { class: "animal-label", text: a.label })
+    ]);
+    b.addEventListener("click", () => {
+      selected = a.id;
+      message.textContent = "";
+      buttons.forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    });
+    return b;
+  });
+
+  const form = el("form", { class: "pet-form" }, [
+    el("div", { class: "animals", role: "group", "aria-label": "Velg dyr" }, buttons),
+    el("div", { class: "pet-form-row" }, [nameInput, el("button", { type: "submit", class: "btn", text: submitText })]),
+    message
+  ]);
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    if (!animalById(selected)) { message.textContent = "Velg et dyr først."; return; }
+    onSubmit(selected, nameInput.value.trim());
+  });
+  return form;
+}
+
+function savePet(animalId, name) {
+  const animal = animalById(animalId);
+  if (!animal) return;
+  pet = { animal: animal.id, name: cleanText(name, 20) || animal.name };
+  save();
+  render();
+}
+
+function renderShop(animal, stageKey) {
+  const balance = pointBalance();
+  const wrap = el("div", { class: "shop" }, [
+    el("h3", { text: "Butikk" }),
+    el("p", { class: "muted", text: "Du har " + balance + " poeng å bruke. Nivået til dyret går ikke ned når du bruker poeng." })
+  ]);
+
+  SLOTS.forEach(slot => {
+    const cards = SHOP.filter(i => i.slot === slot.id).map(item => {
+      const owned = wallet.owned.includes(item.id);
+      const worn = wallet.equipped[slot.id] === item.id;
+      const preview = Object.assign({}, wallet.equipped, { [slot.id]: item.id });
+
+      let button;
+      if (!owned) {
+        const props = { type: "button", class: "btn secondary", "data-key": "shop-" + item.id, "aria-label": "Kjøp " + item.name + " for " + item.price + " poeng", text: "Kjøp" };
+        if (balance < item.price) props.disabled = "";
+        button = el("button", props);
+        button.addEventListener("click", () => buyItem(item.id));
+      } else {
+        button = el("button", { type: "button", class: "btn secondary", "data-key": "shop-" + item.id, "aria-pressed": String(worn), text: worn ? "Ta av" : "Ta på" });
+        button.addEventListener("click", () => toggleItem(item.id));
+      }
+      return el("div", { class: "shop-item" + (worn ? " worn" : "") }, [
+        petArt(animal, stageKey, preview, "shop-art"),
+        el("strong", { text: item.name }),
+        el("span", { class: "muted", text: owned ? "Eid" : item.price + " poeng" }),
+        button
+      ]);
+    });
+    wrap.appendChild(el("h4", { text: slot.label }));
+    wrap.appendChild(el("div", { class: "shop-items" }, cards));
+  });
+  return wrap;
+}
+
+function renderPet() {
+  const box = document.getElementById("pet-panel");
+  const shopBox = document.getElementById("shop-panel");
+  box.innerHTML = "";
+  shopBox.innerHTML = "";
+  shopBox.hidden = !pet;
+  const info = levelInfo(totalPoints());
+
+  if (!pet) {
+    box.appendChild(el("h3", { text: "Velg et studiedyr" }));
+    box.appendChild(el("p", {
+      class: "muted",
+      text: "Du får poeng for studietid (1 poeng per " + MIN_PER_POINT + " minutter) og for oppgaver du krysser av. Dyret starter som baby og blir eldre jo mer du studerer. Poengene kan du bruke på tilbehør." +
+        (info.points > 0 ? " Du har allerede " + info.points + " poeng, og de teller med." : "")
+    }));
+    box.appendChild(buildPetChooser("", "", "Velg dyr", savePet));
+    return;
+  }
+
+  const animal = animalById(pet.animal);
+  const stage = stageOf(info.level);
+  const wearing = SHOP.filter(i => wallet.equipped[i.slot] === i.id).map(i => i.name.toLowerCase());
+  const label = pet.name + ", " + animal.label.toLowerCase() + ", " + stage.name.toLowerCase() + (wearing.length ? ", har på seg " + wearing.join(", ") : "");
+  const art = petArt(animal, stage.key, wallet.equipped, "pet-stage" + (petBounce ? " level-up" : ""), label);
+  petBounce = false;
+
+  const bar = el("div", { class: "progress" }, [el("div")]);
+  bar.firstChild.style.width = info.pct + "%";
+
+  const lines = [info.points + " poeng totalt."];
+  lines.push(info.next === null
+    ? "Høyeste nivå er nådd."
+    : info.toNext + " poeng (ca. " + formatMinutes(info.toNext * MIN_PER_POINT) + " studietid) til nivå " + (info.level + 1) + ".");
+  const nextStage = STAGES.find(s => s.from > info.level);
+  if (nextStage) lines.push(pet.name + " blir " + nextStage.adj + " på nivå " + nextStage.from + ".");
+  lines.push("Du får 1 poeng per " + MIN_PER_POINT + " min studert, og " + TASK_POINTS.low + " til " + TASK_POINTS.high + " poeng for hver ferdige oppgave.");
+
+  box.appendChild(el("div", { class: "pet-view" }, [
+    el("div", { class: "pet-left" }, [art]),
+    el("div", { class: "pet-info" }, [
+      el("h3", { text: pet.name }),
+      el("p", { class: "pet-level", text: "Nivå " + info.level + " · " + stage.name }),
+      bar,
+      el("p", { class: "pet-balance" }, [el("span", { class: "badge points", text: pointBalance() + " poeng å bruke" })]),
+      el("p", { class: "muted pet-text", text: lines.join(" ") }),
+      el("details", { class: "pet-edit" }, [
+        el("summary", { text: "Endre dyr eller navn" }),
+        buildPetChooser(pet.animal, pet.name, "Lagre", savePet)
+      ])
+    ])
+  ]));
+  shopBox.appendChild(renderShop(animal, stage.key));
+}
+
+/* ---------- Sider (enkel ruting med #-adresser) ---------- */
+
+const PAGES = [
+  { id: "home", path: "/", title: "Oversikt" },
+  { id: "plan", path: "/plan", title: "Ukeplan" },
+  { id: "courses", path: "/emner", title: "Emner" },
+  { id: "study", path: "/studietid", title: "Studietid" },
+  { id: "friends", path: "/venner", title: "Venner" },
+  { id: "profile", path: "/profil", title: "Profil" }
+];
+
+function icon(name, cls) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "icon" + (cls ? " " + cls : ""));
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS(SVG_NS, "use");
+  use.setAttribute("href", "#i-" + name);
+  svg.appendChild(use);
+  return svg;
+}
+
+function pageFromHash() {
+  const h = (window.location.hash || "").replace(/^#/, "") || "/";
+  return PAGES.find(p => p.path === h) || PAGES[0];
+}
+
+let currentPage = "home";
+
+function showPage() {
+  const page = pageFromHash();
+  currentPage = page.id;
+  document.querySelectorAll(".view").forEach(v => { v.hidden = v.dataset.page !== page.id; });
+  document.querySelectorAll(".nav-item").forEach(a => {
+    if (a.dataset.page === page.id) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
+  });
+  document.title = (page.id === "home" ? "" : page.title + " · ") + "Fagblom";
+}
+
+function goTo(id) {
+  const page = PAGES.find(p => p.id === id) || PAGES[0];
+  if (window.location.hash !== "#" + page.path) window.location.hash = page.path;
+  showPage();
+}
+
+/* ---------- Oversikt ---------- */
+
+function tile(iconName, label, value, sub, cls) {
+  return el("div", { class: "tile" + (cls ? " " + cls : "") }, [
+    el("div", { class: "tile-top" }, [icon(iconName), el("span", { text: label })]),
+    el("div", { class: "tile-value", text: value }),
+    sub ? el("div", { class: "tile-sub", text: sub }) : null
+  ]);
+}
+
+function minutesLastDays(n) {
+  const today = startOfDay(new Date());
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += minutesOnDate(toISO(addDays(today, -i)));
+  return sum;
+}
+
+/** Antall dager på rad du har studert. Hvis du ikke har studert i dag enda, teller dagene frem til i går. */
+function studyStreak() {
+  const days = new Set(sessions.map(s => s.date));
+  let d = startOfDay(new Date());
+  if (!days.has(toISO(d))) d = addDays(d, -1);
+  let n = 0;
+  while (days.has(toISO(d))) { n++; d = addDays(d, -1); }
+  return n;
+}
+
+function openTaskCounts() {
+  let open = 0, overdue = 0, done = 0, total = 0;
+  const today = startOfDay(new Date());
+  courses.forEach(c => c.tasks.forEach(t => {
+    total++;
+    if (t.done) { done++; return; }
+    open++;
+    if (t.due && daysBetween(today, parseDate(t.due)) < 0) overdue++;
+  }));
+  return { open, overdue, done, total };
+}
+
+function plural(n, one, many) {
+  return n + " " + (n === 1 ? one : many);
+}
+
+function renderStartGuide(box) {
+  box.innerHTML = "";
+  if (courses.length > 0) return;
+  const demo = el("button", { type: "button", class: "btn secondary", text: "Prøv med demodata" });
+  demo.addEventListener("click", loadDemo);
+  box.appendChild(el("section", { class: "panel guide", "aria-labelledby": "h-guide" }, [
+    el("h2", { id: "h-guide", text: "Kom i gang" }),
+    el("ol", { class: "guide-steps" }, [
+      el("li", {}, [el("strong", { text: "Legg inn emnene dine. " }), document.createTextNode("Med eksamensdato får du nedtelling og varsel.")]),
+      el("li", {}, [el("strong", { text: "Få en ukeplan. " }), document.createTextNode("Appen foreslår hva du bør lese hver dag.")]),
+      el("li", {}, [el("strong", { text: "Studer og samle poeng. " }), document.createTextNode("Studiedyret ditt vokser, og du kan kjøpe tilbehør til det.")])
+    ]),
+    el("div", { class: "actions" }, [
+      el("a", { class: "btn", href: "#/emner", text: "Legg til første emne" }),
+      demo
+    ])
+  ]));
+}
+
+function renderHome() {
+  const today = startOfDay(new Date());
+  setText("home-date", formatWeekday(today) + " " + formatLongDate(today));
+
+  const noCourses = courses.length === 0;
+  renderStartGuide(document.getElementById("start-guide"));
+  document.getElementById("home-tiles").hidden = noCourses;
+  document.querySelector(".home-grid").hidden = noCourses;
+  if (noCourses) return;
+
+  // Nøkkeltall
+  const next = courses.map(c => ({ c, left: daysLeft(c) })).filter(x => x.left >= 0).sort((a, b) => a.left - b.left)[0];
+  const tasks = openTaskCounts();
+  const todayMin = minutesOnDate(toISO(today));
+  const streak = studyStreak();
+  const tiles = document.getElementById("home-tiles");
+  tiles.innerHTML = "";
+  tiles.appendChild(next
+    ? tile("calendar", "Neste eksamen", next.left === 0 ? "I dag" : next.left === 1 ? "I morgen" : next.left + " dager", next.c.name, next.left <= 2 ? "urgent" : "")
+    : tile("calendar", "Neste eksamen", "–", "Ingen kommende eksamener"));
+  tiles.appendChild(tile("clock", "Studert i dag", formatMinutes(todayMin), "Siste 7 dager: " + formatMinutes(minutesLastDays(7))));
+  tiles.appendChild(tile("flame", "Studierekke", plural(streak, "dag", "dager"), streak > 0 ? "på rad" : "Studer i dag for å starte"));
+  tiles.appendChild(tile("check", "Åpne oppgaver", String(tasks.open), tasks.overdue > 0 ? plural(tasks.overdue, "er forfalt", "er forfalt") : "Ingen forfalte", tasks.overdue > 0 ? "urgent" : ""));
+
+  // Dagens plan
+  const list = document.getElementById("home-today");
+  list.innerHTML = "";
+  const day = buildPlan()[0];
+  const chips = day ? planChips(day) : [];
+  if (chips.length === 0) chips.push(el("p", { class: "empty" }, [document.createTextNode("Ingenting planlagt i dag. Legg til et emne med eksamensdato frem i tid.")]));
+  chips.forEach(c => list.appendChild(c));
+
+  // Studiedyret
+  const box = document.getElementById("home-pet");
+  box.innerHTML = "";
+  if (!pet) {
+    box.appendChild(el("p", { class: "muted", text: "Velg et studiedyr som vokser mens du studerer." }));
+    box.appendChild(el("a", { class: "btn secondary", href: "#/profil", text: "Velg dyr" }));
+    return;
+  }
+  const info = levelInfo(totalPoints());
+  const stage = stageOf(info.level);
+  const bar = el("div", { class: "progress" }, [el("div")]);
+  bar.firstChild.style.width = info.pct + "%";
+  box.appendChild(el("div", { class: "home-pet-row" }, [
+    petArt(animalById(pet.animal), stage.key, wallet.equipped, "home-pet-art", pet.name + ", " + stage.name.toLowerCase()),
+    el("div", { class: "home-pet-info" }, [
+      el("strong", { text: pet.name }),
+      el("span", { class: "muted", text: "Nivå " + info.level + " · " + stage.name }),
+      bar,
+      el("span", { class: "badge points", text: pointBalance() + " poeng å bruke" })
+    ])
+  ]));
+}
+
+/* ---------- Profil: statistikk ---------- */
+
+function renderProfileStats() {
+  const box = document.getElementById("profile-stats");
+  box.innerHTML = "";
+  const total = sessions.reduce((sum, s) => sum + s.minutes, 0);
+  const tasks = openTaskCounts();
+  const streak = studyStreak();
+  box.appendChild(tile("clock", "Studert totalt", formatMinutes(total), plural(sessions.length, "økt", "økter")));
+  box.appendChild(tile("timer", "Siste 7 dager", formatMinutes(minutesLastDays(7)), "snitt " + formatMinutes(minutesLastDays(7) / 7) + " per dag"));
+  box.appendChild(tile("flame", "Studierekke", plural(streak, "dag", "dager"), streak > 0 ? "på rad" : "ingen rekke akkurat nå"));
+  box.appendChild(tile("check", "Ferdige oppgaver", tasks.done + " av " + tasks.total, tasks.total === 0 ? "ingen oppgaver enda" : ""));
+  box.appendChild(tile("star", "Poeng tjent", String(totalPoints()), "nivå " + levelInfo(totalPoints()).level));
+}
+
+/* ---------- Venner (demo) ---------- */
+
+/* Oppdiktede venner. Ekte venner krever en server med innlogging. */
+const DEMO_FRIENDS = [
+  { name: "Sara", animal: "rabbit", level: 9, week: 1180, equipped: { head: "crown" } },
+  { name: "Ida", animal: "panda", level: 7, week: 905, equipped: { face: "glasses" } },
+  { name: "Emma", animal: "cat-black", level: 6, week: 740, equipped: { bg: "night" } },
+  { name: "Mats", animal: "dog-brown", level: 5, week: 610, equipped: { neck: "scarf" } },
+  { name: "Noah", animal: "fox", level: 4, week: 455, equipped: { head: "party" } },
+  { name: "Jonas", animal: "penguin", level: 3, week: 280, equipped: { neck: "bowtie" } }
+];
+let friendSort = "week";
+
+function leaderboardRows() {
+  const me = { name: "Du", you: true, animal: pet ? pet.animal : "", level: levelInfo(totalPoints()).level, week: minutesLastDays(7), equipped: wallet.equipped };
+  const rows = DEMO_FRIENDS.map(f => Object.assign({ you: false }, f)).concat(me);
+  const score = r => friendSort === "level" ? r.level * 100000 + r.week : r.week * 100 + r.level;
+  return rows.sort((a, b) => score(b) - score(a));
+}
+
+function renderLeaderboard() {
+  const list = document.getElementById("leaderboard");
+  list.innerHTML = "";
+  document.querySelectorAll(".seg-btn").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sort === friendSort)));
+
+  const rows = leaderboardRows();
+  const rank = rows.findIndex(r => r.you) + 1;
+  let summary = "Du ligger på " + rank + ". plass av " + rows.length + (friendSort === "level" ? " etter nivå." : " denne uken.");
+  if (friendSort === "week" && minutesLastDays(7) === 0) summary += " Logg litt studietid for å klatre på listen.";
+  document.getElementById("lb-summary").textContent = summary;
+
+  const max = friendSort === "level" ? MAX_LEVEL : Math.max(1, ...rows.map(r => r.week));
+  rows.forEach((r, i) => {
+    const animal = animalById(r.animal);
+    const stage = stageOf(r.level);
+    const avatar = animal
+      ? petArt(animal, stage.key, r.equipped, "lb-art")
+      : el("div", { class: "lb-art lb-initial", "aria-hidden": "true", text: r.name.charAt(0) });
+    const value = friendSort === "level" ? r.level : r.week;
+    const bar = el("div", { class: "progress" }, [el("div")]);
+    bar.firstChild.style.width = Math.round((value / max) * 100) + "%";
+    list.appendChild(el("li", { class: "lb-row" + (r.you ? " you" : "") }, [
+      el("span", { class: "rank rank-" + (i + 1), text: String(i + 1) }),
+      avatar,
+      el("div", { class: "lb-name" }, [
+        el("strong", { text: r.name }),
+        r.you ? null : el("span", { class: "badge", text: "Demo" }),
+        el("span", { class: "muted", text: "Nivå " + r.level + " · " + stage.name })
+      ]),
+      el("div", { class: "lb-score" }, [
+        el("strong", { text: friendSort === "level" ? "Nivå " + r.level : formatMinutes(r.week) }),
+        bar
+      ])
+    ]));
+  });
+}
+
+/* ---------- Varsler ---------- */
+
+function upcomingExams() {
+  return courses
+    .map(c => ({ course: c, left: daysLeft(c) }))
+    .filter(x => x.left >= 0 && x.left <= ALERT_DAYS)
+    .sort((a, b) => a.left - b.left);
+}
+
+function alertText(course, left) {
+  if (left === 0) return "Eksamen i dag: " + course.name;
+  if (left === 1) return "Eksamen i morgen: " + course.name;
+  return "Eksamen om " + left + " dager: " + course.name;
+}
+
+function renderAlerts() {
+  const box = document.getElementById("alerts");
+  box.innerHTML = "";
+  upcomingExams().forEach(({ course, left }) => {
+    const prog = progressOf(course);
+    const status = prog.total === 0
+      ? "Ingen oppgaver lagt til enda."
+      : prog.done + " av " + prog.total + " oppgaver ferdig.";
+    box.appendChild(el("div", { class: "alert" + (left <= 2 ? " urgent" : "") }, [
+      el("strong", {}, [icon("bell"), document.createTextNode(alertText(course, left))]),
+      el("small", { text: status })
+    ]));
+  });
+}
+
+function notificationsSupported() {
+  return "Notification" in window;
+}
+
+function updateNotifyButton() {
+  const btn = document.getElementById("notify-btn");
+  if (!notificationsSupported()) {
+    btn.disabled = true;
+    btn.textContent = "Nettleservarsler støttes ikke";
+  } else if (Notification.permission === "granted") {
+    btn.textContent = "Nettleservarsler er på";
+  } else if (Notification.permission === "denied") {
+    btn.disabled = true;
+    btn.textContent = "Varsler er blokkert i nettleseren";
+  }
+}
+
+// Viser maks ett nettleservarsel per emne per dag
+function notifyDue() {
+  if (!notificationsSupported() || Notification.permission !== "granted") return;
+  let sent = {};
+  try { sent = JSON.parse(localStorage.getItem(NOTIFIED_KEY)) || {}; } catch (e) { sent = {}; }
+  const todayISO = toISO(new Date());
+
+  upcomingExams().forEach(({ course, left }) => {
+    if (sent[course.id] === todayISO) return;
+    try {
+      new Notification("Fagblom", { body: alertText(course, left) });
+      sent[course.id] = todayISO;
+    } catch (e) { /* noen nettlesere tillater ikke dette */ }
+  });
+
+  try { localStorage.setItem(NOTIFIED_KEY, JSON.stringify(sent)); } catch (e) { /* ignorer */ }
+}
+
+/* ---------- Eksport, import og kalender ---------- */
+
+function setDataStatus(msg) {
+  setText("data-status", msg);
+}
+
+function buildExportJSON() {
+  return JSON.stringify({
+    app: "fagblom",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    courses,
+    sessions,
+    pet,
+    wallet
+  }, null, 2);
+}
+
+function icsEscape(s) {
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+}
+
+function icsFold(line) {
+  // Linjer i .ics skal være korte. Fortsettelseslinjer starter med mellomrom.
+  const chars = Array.from(line);
+  const out = [];
+  let first = true;
+  while (chars.length > 0) {
+    const take = first ? 70 : 69;
+    out.push((first ? "" : " ") + chars.splice(0, take).join(""));
+    first = false;
+  }
+  return out.join("\r\n");
+}
+
+function buildICS() {
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Fagblom//NO",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:Fagblom"
+  ];
+
+  function addEvent(uid, iso, summary, alarm) {
+    const end = toISO(addDays(parseDate(iso), 1));
+    lines.push(
+      "BEGIN:VEVENT",
+      "UID:" + uid + "@fagblom",
+      "DTSTAMP:" + stamp,
+      "DTSTART;VALUE=DATE:" + iso.replace(/-/g, ""),
+      "DTEND;VALUE=DATE:" + end.replace(/-/g, ""),
+      "SUMMARY:" + icsEscape(summary)
+    );
+    if (alarm) {
+      // Påminnelse kl. 09 dagen før (15 timer før midnatt)
+      lines.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsEscape(summary), "TRIGGER:-PT15H", "END:VALARM");
+    }
+    lines.push("END:VEVENT");
+  }
+
+  courses.forEach(c => {
+    addEvent("exam-" + c.id, c.date, "Eksamen: " + c.name, true);
+    c.tasks.filter(t => !t.done && t.due).forEach(t => {
+      addEvent("task-" + t.id, t.due, "Frist: " + t.text + " (" + c.name + ")", false);
+    });
+  });
+
+  lines.push("END:VCALENDAR");
+  return lines.map(icsFold).join("\r\n") + "\r\n";
+}
+
+function download(filename, text, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = el("a", { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Kunne ikke lese filen"));
+    reader.readAsText(file);
+  });
+}
+
+async function importFile(file) {
+  try {
+    if (file.size > 2000000) throw new Error("For stor fil");
+    const data = sanitizeData(JSON.parse(await readFile(file)));
+    const hasData = courses.length > 0 || sessions.length > 0;
+    const summary = data.courses.length + " emner og " + data.sessions.length + " økter";
+    if (hasData && !confirm("Importere " + summary + "? Dette erstatter dataene som ligger i nettleseren nå.")) {
+      setDataStatus("Importen ble avbrutt.");
+      return;
+    }
+    courses = data.courses;
+    sessions = data.sessions;
+    pet = data.pet;
+    wallet = data.wallet;
+    openIds.clear();
+    timer.courseId = "";
+    resetTimer();
+    save();
+    render();
+    setDataStatus("Importerte " + summary + ".");
+  } catch (e) {
+    setDataStatus("Kunne ikke lese filen. Velg en .json-fil som er lastet ned fra denne appen.");
+  }
+}
+
+/* ---------- Tema (lys/mørk) ---------- */
+
+function currentTheme() {
+  const t = document.documentElement.getAttribute("data-theme");
+  if (t === "dark" || t === "light") return t;
+  const dark = typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return dark ? "dark" : "light";
+}
+
+function updateThemeButton() {
+  document.getElementById("theme-btn").textContent = currentTheme() === "dark" ? "Lys modus" : "Mørk modus";
+}
+
+function toggleTheme() {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignorer */ }
+  updateThemeButton();
+}
+
+/* ---------- Hele siden ---------- */
+
+function render() {
+  // Husk hvilket felt som hadde fokus, så tastaturbrukere ikke mister plassen sin
+  const active = document.activeElement;
+  const key = pendingFocus || (active && active.dataset && active.dataset.key) || null;
+  pendingFocus = null;
+
+  renderSummary();
+  renderSidebar();
+  renderAlerts();
+  renderPlan();
+  renderCourses();
+  renderTimer();
+  renderStats();
+  renderPet();
+  renderHome();
+  renderProfileStats();
+  renderLeaderboard();
+
+  if (key) {
+    const target = document.querySelector('[data-key="' + key + '"]');
+    if (target) target.focus();
+  }
+}
+
+/* ---------- Hendelser ---------- */
+
+document.getElementById("course-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = document.getElementById("course-name").value.trim();
+  const date = document.getElementById("course-date").value;
+  const color = document.getElementById("course-color").value;
+  if (!name || !isValidISO(date)) return;
+  const id = newId();
+  courses.push({
+    id, name, date,
+    color: COLOR_RE.test(color) ? color : DEFAULT_COLOR,
+    tasks: [], goalGrade: "", goalHours: 0
+  });
+  openIds.add(id); // åpner emnet slik at du kan legge til oppgaver med en gang
+  save();
+  e.target.reset();
+  document.getElementById("course-color").value = DEFAULT_COLOR;
+  render();
+});
+
+document.getElementById("demo-btn").addEventListener("click", loadDemo);
+
+function loadDemo() {
+  const today = startOfDay(new Date());
+  const inDays = n => toISO(addDays(today, n));
+  const t = (text, priority, due, done, rewarded) => ({ id: newId(), text, done: !!done, due: due === undefined ? "" : due, priority, rewarded: !!rewarded });
+
+  const web = { id: newId(), name: "Webapplikasjoner (demo)", date: inDays(12), color: "#c98a8f", goalGrade: "B", goalHours: 40,
+    tasks: [t("Gå gjennom REST og HTTP", "medium", "", true, true), t("Øv på Blazor-komponenter", "high", inDays(3)), t("Gamle eksamensoppgaver", "medium", inDays(9))] };
+  const db = { id: newId(), name: "Databaser (demo)", date: inDays(6), color: "#8fa67a", goalGrade: "A", goalHours: 25,
+    tasks: [t("Normalisering", "medium", "", true, true), t("SQL-joins", "medium", "", true, true), t("Transaksjoner", "high", inDays(2)), t("Indekser", "low", inDays(4))] };
+  const math = { id: newId(), name: "Matematikk (demo)", date: inDays(20), color: "#d4a95a", goalGrade: "C", goalHours: 30,
+    tasks: [t("Lineær algebra, kapittel 1-3", "high", inDays(-1)), t("Egenverdier", "low", "")] };
+
+  courses = [web, db, math];
+  const log = (course, daysAgo, minutes) => ({ id: newId(), courseId: course.id, date: inDays(-daysAgo), minutes });
+  sessions = [
+    log(web, 0, 45), log(db, 1, 60), log(web, 1, 30), log(math, 2, 50),
+    log(db, 3, 90), log(web, 4, 40), log(db, 4, 25), log(math, 6, 35)
+  ];
+  if (!pet) pet = { animal: "cat-orange", name: "Misse" };
+  // Demo: tre ferdige oppgaver har gitt 15 poeng, og dyret har allerede kjøpt en sløyfe
+  wallet = { bonus: 15, spent: 10, owned: ["bow"], equipped: { head: "bow", face: "", neck: "", bg: "" } };
+  openIds.clear();
+  timer.courseId = "";
+  resetTimer();
+  save();
+  render();
+}
+
+document.getElementById("notify-btn").addEventListener("click", async () => {
+  if (!notificationsSupported()) return;
+  try {
+    await Notification.requestPermission();
+  } catch (e) { /* ignorer */ }
+  updateNotifyButton();
+  notifyDue();
+});
+
+document.getElementById("theme-btn").addEventListener("click", toggleTheme);
+
+document.getElementById("clear-btn").addEventListener("click", () => {
+  if (courses.length === 0 && sessions.length === 0 && !pet) return;
+  if (confirm("Slette alle emner, oppgaver, loggført tid og studiedyret?")) {
+    courses = [];
+    sessions = [];
+    pet = null;
+    wallet = emptyWallet();
+    openIds.clear();
+    timer.courseId = "";
+    resetTimer();
+    save();
+    render();
+  }
+});
+
+/* Timer */
+document.getElementById("timer-start").addEventListener("click", startOrPauseTimer);
+document.getElementById("timer-finish").addEventListener("click", () => finishTimer(false));
+document.getElementById("timer-reset").addEventListener("click", () => {
+  resetTimer();
+  setTimerStatus("Timeren er nullstilt.");
+  renderTimer();
+});
+document.getElementById("timer-course").addEventListener("change", e => {
+  timer.courseId = e.target.value;
+  saveTimer();
+});
+document.querySelectorAll(".preset").forEach(btn => {
+  btn.addEventListener("click", () => setTimerMinutes(btn.dataset.min));
+});
+document.getElementById("timer-custom").addEventListener("change", e => setTimerMinutes(e.target.value));
+document.addEventListener("visibilitychange", () => { if (!document.hidden && timer.running) tick(); });
+
+/* Manuell logging */
+document.getElementById("manual-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const course = courseById(timer.courseId);
+  const rawMinutes = Number(document.getElementById("manual-minutes").value);
+  const minutes = Math.round(rawMinutes);
+  const date = document.getElementById("manual-date").value;
+  if (!course) { setTimerStatus("Velg et emne først."); return; }
+  if (!Number.isFinite(rawMinutes) || minutes < 1 || minutes > 1440) { setTimerStatus("Skriv inn antall minutter mellom 1 og 1440."); return; }
+  if (!isValidISO(date) || date > toISO(new Date())) { setTimerStatus("Velg en dato som ikke er frem i tid."); return; }
+  document.getElementById("manual-minutes").value = "";
+  const bonus = logSession(course.id, minutes, date);
+  setTimerStatus("Logget " + formatMinutes(minutes) + " på " + course.name + "." + bonus);
+});
+
+/* Data */
+document.getElementById("export-btn").addEventListener("click", () => {
+  download("fagblom-" + toISO(new Date()) + ".json", buildExportJSON(), "application/json");
+  setDataStatus("Sikkerhetskopien er lastet ned.");
+});
+document.getElementById("import-btn").addEventListener("click", () => document.getElementById("import-file").click());
+document.getElementById("import-file").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (file) importFile(file).then(() => { e.target.value = ""; });
+});
+document.getElementById("ics-btn").addEventListener("click", () => {
+  if (courses.length === 0) { setDataStatus("Legg til et emne først, så har du noe å legge i kalenderen."); return; }
+  download("fagblom.ics", buildICS(), "text/calendar;charset=utf-8");
+  setDataStatus("Kalenderfilen er lastet ned. Åpne den for å legge eksamener og frister i kalenderen din.");
+});
+
+/* Meny på mobil: knappen øverst viser og skjuler handlingene */
+const sidebar = document.querySelector(".sidebar");
+const menuBtn = document.getElementById("menu-btn");
+
+function setMenu(open) {
+  sidebar.classList.toggle("menu-open", open);
+  menuBtn.setAttribute("aria-expanded", String(open));
+}
+
+menuBtn.addEventListener("click", () => setMenu(!sidebar.classList.contains("menu-open")));
+document.getElementById("side-actions").addEventListener("click", e => {
+  if (e.target.closest("button")) setMenu(false);
+});
+
+document.querySelectorAll(".seg-btn").forEach(b => b.addEventListener("click", () => {
+  friendSort = b.dataset.sort === "level" ? "level" : "week";
+  renderLeaderboard();
+}));
+
+window.addEventListener("hashchange", () => {
+  showPage();
+  setMenu(false);
+  window.scrollTo(0, 0);
+  document.getElementById("main").focus({ preventScroll: true });
+});
+
+/* ---------- Start ---------- */
+
+showPage();
+render();
+updateNotifyButton();
+updateThemeButton();
+notifyDue();
+
+if (timer.running) {
+  if (timerRemaining() <= 0) finishTimer(true); // tiden gikk ut mens siden var lukket
+  else startTicking();
+}
+
+  </script>
+</body>
+</html>
