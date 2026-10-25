@@ -3,6 +3,7 @@
 **Fagblom** er en studieapp som hjelper meg å planlegge eksamenslesing, logge studietid og samle poeng til et studiedyr som vokser. Navnet kommer av «fag» (emnene) og «blom» (noe som vokser når man steller det). Den er laget med hjelp fra generativ AI (Claude) som «vibe coding»-oppgave ved OsloMet.
 
 **Demo:** (https://sakha7445.github.io/fagblom/)
+Trykk «Prøv med demodata» på startsiden for å se appen med eksempeldata.
 
 ## Hva den gjør
 
